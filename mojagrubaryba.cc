@@ -1,14 +1,9 @@
-// TO DO
-/***
-   Jak rozwiazac sprawe s Graczem, Humanem i komputerem?
-   czy komputer powinien miec taki sami interface jak human ALE np
-   dac mu jeszcze obiekt strategie: wtedy w computerze 
-     bool wantbuy() { return strategia.wantbuy() }
-	czy to bedzie ssalo bo interface human niby moze sie zmienic...
-	nie do konca widze jak to zrobic
-*/	
+#include "grubaryba.h"
 
 typedef std::string pole_key_t;
+
+const unsigned int POCZATKOWA_KASA = 1000;
+const float KARA_ZA_SPRZEDAZ = 1/2;
 
 // do fabryki
 const pole_key_t AKWARIUM = "akwarium";
@@ -23,17 +18,6 @@ const pole_key_t KORALOWIEC_APORINA_220 = "koralowiec_aporina";
 const pole_key_t KORALOWIEC_MENELLA_280 = "koralowiec_menella";
 const pole_key_t KORALOWIEC_PENNATULA_400 = "koralowiec_pennatula";
 
-class Gracz {
-public:
-	Gracz() {}
-private:
-	int hajs;
-	int ile_rund_postoju;
-	std::string nazwa;
-	int id; //pozycja w wektorze graczy czy cos takiego
-};
-
-
 // hierarchia Pola
 class Pole;
 	class Akwarium;
@@ -44,7 +28,96 @@ class Pole;
 	class Nieruchomosc;
 		class Ob_uz_pub;
 		class Koralowiec;
+// Strategia
+class Strategia;
+	class Czlowiecza;
+	class Dumb;
+	class Smartass;
 
+class Strategia {
+public:
+	// domyslnie zwracaja false
+	virtual bool wantSell(const Nieruchomosc& n) { return false; }
+	virtual bool wantBuy(const Nieruchomosc& n , int money) { return false; }
+protected:
+	bool mozliweDoKupienia(int money, int cena) {
+		return money >= cena;
+	}
+};
+
+class Smartass : public Strategia {
+public:
+	bool wantBuy(const Nieruchomosc& n , int money) {
+		return mozliweDoKupienia(money , n.getCena());
+	}
+};
+
+class Dumb : public Strategia {
+public:
+	Dumb() : licznik() {}
+	bool wantBuy(const Nieruchomosc& n , int money) {
+		nast();
+		if( licznik == 1 ) 
+			return mozliweDoKupienia(money , n.getCena());
+		else
+			return false;
+	}
+private:
+	void nast() {
+		licznik++;
+		licznik %= MODULO;
+	}
+	int licznik;
+	static const int MODULO = 3;
+};
+
+// strategia czlowieka! wazne
+// TO DO
+class Czlowiecza : public Strategia {
+public:
+private:
+	// tutaj trzymajmy pointer na czlowieka! wtedy wystarczy zwracac:
+	// return ptr -> wantBuy itd ...
+}
+
+class Gracz {
+public:
+	Gracz(std::string nazwa, unsigned int id, Strategia strategia) : nazwa(nazwa),
+   							money(POCZATKOWA_KASA), id(id), ile_rund_postoju(0),
+							strategia(strategia) {}
+
+
+	// plac zwraca ilosc kasy jaka graczowi udalo sie zaplacic
+	// ponadto sprawdza czy gracz ma gotowke, i czy czasem nie zbankrutuje
+	// jezeli zbankrutuje to funkcja moze zwrocic wynik t, ze:
+	//		wynik < cena
+	int plac(unsigned int cena); // TO DO
+
+	void giveMoney(unsigned int kasa) { money += kasa; }
+	bool wantBuy(const Nieruchomosc& n) {
+		return strategia.wantBuy(n, money);
+	}
+	void wantSell(Nieruchomosc& n) {
+		if( strategia.wantSell(n) ) {
+			giveMoney(n.getCena() * KARA_ZA_SPRZEDAZ);
+			n.sprzedana();
+		}
+	}
+
+private: 
+	std::string nazwa;
+	int money;
+	unsigned int id; //pozycja w wektorze graczy
+
+	int ile_rund_postoju;
+	Strategia strategia;
+	// albo vector ptr na te posiadlosci? chodzi o to zeby to byly TE same obiekty
+	// ktore plansza przechowuje w sobie`
+	std::vector<Nieruchomosc> posiadlosci;
+};
+
+
+// Interface pola
 class Pole {
 	// czy tutaj tak jak w javie funkcje abstrakcyjen moga cos robic?
 public:
@@ -59,6 +132,16 @@ class Akwarium : public Pole {
 };
 
 class Depozyt : public Pole {
+private:
+	unsigned int gotowka;
+	static const unsigned int stawka = 15;
+public:
+	Depozyt() : gotowka(0) {}
+	void action(Gracz& g) {
+		g.giveMoney(gotowka);
+		gotowka = 0;
+	}
+	void passing(Gracz& g) { g.plac(stawka); }
 };
 
 class Kara : public Pole {
@@ -66,6 +149,7 @@ private:
 	unsigned int kara;
 public:
 	Kara(unsigned int kara) : kara(kara) {}
+	void action(Gracz& g) { g.plac(kara); }
 };
 
 class Nagroda : public Pole {
@@ -73,56 +157,93 @@ private:
 	unsigned int nagroda;
 public:
 	Nagroda(unsigned int nagroda) : nagroda(nagroda) {}
+	void action(Gracz& g) { g.giveMoney(nagroda); }
 };
 
 class Start : public Pole {
+private:
+	// czy to tak sie pisało?
+	static const unsigned int nagroda = 50;
+public:
+	void passing(Gracz& g) { this->action(g); }
+	void action(Gracz& g) { g.giveMoney(nagroda); }
 };
 
+// Interface nieruchomosci
 class Nieruchomosc : public Pole {
-	// czy nieruchomosc tez musi mie virutal destructor ?
-	// czy znowu trzeba powtarzac virutal void passing i action?
+	// czy nieruchomosc tez musi miec virutal destructor ?
 public:
 	virtual ~Nieruchomosc() {}
 	virtual void passing(Gracz& g) {}
 	virtual void action(Gracz& g) = 0; // tutaj kazdy ma swoja akcje!
+	unsigned int getCena() const { return cena; }
+	unsigned int getNazwa() const { return nazwa; }
+	void sprzedana() { zajete = false; }
+
 protected:
 	bool zajete;
-	unsigned int wlasciciel; // jakies id wlasciciela
+	unsigned int id_wlasciciela; // pozycja wlasciciela w vektorze graczy
+	// tutaj moze dodac wskaznik na wlasciciela?
+	Gracz& wlasciciel; //, zeby wiedziec komu sie placi
+
+	// TO DO
+	bool tenSamWlasciciel(const Gracz& g) const;
+	// oferujac kupno przekazujemy samo pole
+	// gracz sam wyciagnie cene i nazwe przez gety
+	void oferujKupno(Gracz& g);
+
+private:
 	unsigned int cena;
+	unsigned int stawka;
+	std::string nazwa; //potrzebne do przekazywania Humanowi czy chce kupic
 };
 
-// TO DO
-// Ob_uz_pub i Koralowiec maja takie same konstruktory, czy daloby sie tak jak
-// w javie napisac konstruktor w Nieruchomosc i wywolywac ten konstruktor w
-// klasach Koralowiec i Ob_uz_oub?
-//
-// Jesli nie to jakas protected funkcje do nieruchomosci dac (Init(int cena) czy cos)
 class Ob_uz_pub : public Nieruchomosc {
 public:
-	Ob_uz_pub(unsigned int cena) : zajete(false), wlasciciel(0), cena(cena) {}
-	// TO DO do zaimplementowania!
-	void passing(Gracz& g);
+	Ob_uz_pub(unsigned int cena) : zajete(false), wlasciciel(0),
+   								cena(cena) , stawka(cena * procent) {}
 	void action(Gracz& g);
+private:
+	static const float procent = 4/10;
 };
+
+void Ob_uz_pub::action(Gracz& g) {
+	if( !zajete )
+		oferujKupno(g);
+	else if( !tenSamWlasciciel(g) ) {
+		wlasciciel.giveMoney( g.plac(stawka) );
+	}
+}
 
 class Koralowiec : public Nieruchomosc {
 public:
-	Koralowiec(unsigned int cena) : zajete(false), wlasciciel(0), cena(cena) {}
-	// TO DO do zaimplementowania!
-	void passing(Gracz& g);
+	Koralowiec(unsigned int cena) : zajete(false), wlasciciel(0),
+   								cena(cena), stawka(cena * procent) {}
 	void action(Gracz& g);
+private:
+	static const float procent 2/10;
 };
+
+void Koralowiec::action(Gracz& g) {
+	if( !zajete )
+		oferujKupno(g);
+	else if( !tenSamWlasciciel ) {
+		wlasciciel.giveMoney( g.plac(stawka) );
+	}
+}
 
 class Plansza {
 public:
-	Plansza();
+	Plansza() { stworzPlansze_1(); }
 private:
 	vector<Pole> pola;
 	static Fabryka fabryka; // czy to na pewno tutaj?
 							// jak zrobic zeby tylko jedna sie utworzyla?
+	void stworzPlansze_1();
 };
 
-Plansza::Plansza() {
+void Plansza::stworzPlansze_1() {
+	pola.clear(); // czy jak to tam sie nazywa
 	pola.push_back(f.createPole(START)); // itd!
 	// itd ... moze to da sie lepiej niz tak recznie?
 }
