@@ -1,15 +1,38 @@
-// gdzie tego typedefa? czy nei dałoby sie go wsadzic gdzies do klasy?
+// TO DO
+/***
+   Jak rozwiazac sprawe s Graczem, Humanem i komputerem?
+   czy komputer powinien miec taki sami interface jak human ALE np
+   dac mu jeszcze obiekt strategie: wtedy w computerze 
+     bool wantbuy() { return strategia.wantbuy() }
+	czy to bedzie ssalo bo interface human niby moze sie zmienic...
+	nie do konca widze jak to zrobic
+*/	
+
 typedef std::string pole_key_t;
 
-// tutaj pewnie trzeba bedzie jeszcze dodac: np
-// KORALOWIEC_TYP_A , KORALOWIEC_TYP_B itd ...
+// do fabryki
 const pole_key_t AKWARIUM = "akwarium";
 const pole_key_t DEPOZYT = "depozyt";
-const pole_key_t KARA = "kara";
-const pole_key_t NAGRODA = "nagroda";
+const pole_key_t KARA_REKIN_180 = "kara_rekin";
+const pole_key_t NAGRODA_BLAZENKI_120 = "nagroda_blazenki";
 const pole_key_t START = "start";
-const pole_key_t OB_UZ_PUB = "obiekt";
-const pole_key_t KORALOWIEC = "koralowiec";
+const pole_key_t OB_UZ_PUB_GROTA_300 = "ob_uz_pub_grota";
+const pole_key_t OB_UZ_PUB_STATEK_250 = "ob_uz_pub_statek";
+const pole_key_t KORALOWIEC_ANEMONIA_160 = "koralowiec_anemonia";
+const pole_key_t KORALOWIEC_APORINA_220 = "koralowiec_aporina";
+const pole_key_t KORALOWIEC_MENELLA_280 = "koralowiec_menella";
+const pole_key_t KORALOWIEC_PENNATULA_400 = "koralowiec_pennatula";
+
+class Gracz {
+public:
+	Gracz() {}
+private:
+	int hajs;
+	int ile_rund_postoju;
+	std::string nazwa;
+	int id; //pozycja w wektorze graczy czy cos takiego
+};
+
 
 // hierarchia Pola
 class Pole;
@@ -19,7 +42,7 @@ class Pole;
 	class Nagroda;
 	class Start;
 	class Nieruchomosc;
-		class Ob_uz_pub; // obiekt uzytecznosci publicznej
+		class Ob_uz_pub;
 		class Koralowiec;
 
 class Pole {
@@ -34,12 +57,24 @@ public:
 
 class Akwarium : public Pole {
 };
+
 class Depozyt : public Pole {
 };
+
 class Kara : public Pole {
+private:
+	unsigned int kara;
+public:
+	Kara(unsigned int kara) : kara(kara) {}
 };
+
 class Nagroda : public Pole {
+private:
+	unsigned int nagroda;
+public:
+	Nagroda(unsigned int nagroda) : nagroda(nagroda) {}
 };
+
 class Start : public Pole {
 };
 
@@ -105,16 +140,27 @@ Pole Fabryka::createPole(const pole_key_t& k) {
 		return new Akwarium();
 	if( k.compare(DEPOZYT) == 0 )
 		return new Depozyt();
-	if( k.compare(KARA) == 0 )
-		return new Kara();
-	if( k.compare(NAGRODA) == 0 )
-		return new Nagroda();
+	if( k.compare(KARA_REKIN_180) == 0 )
+		return new Kara(180);
+	if( k.compare(NAGRODA_BLAZENKI_120) == 0 )
+		return new Nagroda(120);
 	if( k.compare(START) == 0 )
 		return new Start();
-	if( k.compare(OB_UZ_PUB) == 0 )
-		return new Ob_uz_pub();
-	if( k.compare(KORALOWIEC) == 0 )
-		return new Koralowiec();
+	// Obiekty uzyteczonsci publicznej:
+	if( k.compare(OB_UZ_PUB_STATEK_250) == 0 )
+		return new Ob_uz_pub(250);
+	if( k.compare(OB_UZ_PUB_GROTA_300) == 0 )
+		return new Ob_uz_pub(300);
+	// Koralowce:
+	if( k.compare(KORALOWIEC_ANEMONIA_160) == 0 )
+		return new Koralowiec(160);
+	if( k.compare(KORALOWIEC_APORINA_220) == 0 )
+		return nwe Koralowiec(220);
+	if( k.compare(KORALOWIEC_MENELLA_280) == 0 )
+		return new Koralowiec(280);
+	if( k.compare(KORALOWIEC_PENNATULA_400) == 0 )
+		return new Koralowiec(400);
+
 	return 0; // tutaj mozna cos domyslnie zwrocic
 }
 
