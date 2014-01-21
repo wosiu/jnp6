@@ -6,6 +6,7 @@ const unsigned int POCZATKOWA_KASA = 1000;
 const float KARA_ZA_SPRZEDAZ = 1/2;
 
 // do fabryki
+const pole_key_t WYSPA = "wyspa";
 const pole_key_t AKWARIUM = "akwarium";
 const pole_key_t DEPOZYT = "depozyt";
 const pole_key_t KARA_REKIN_180 = "kara_rekin";
@@ -28,7 +29,7 @@ class Pole;
 	class Nieruchomosc;
 		class Ob_uz_pub;
 		class Koralowiec;
-// Strategia
+// hierarchia Strategii
 class Strategia;
 	class Czlowiecza;
 	class Dumb;
@@ -37,8 +38,8 @@ class Strategia;
 class Strategia {
 public:
 	// domyslnie zwracaja false
-	virtual bool wantSell(const Nieruchomosc& n) { return false; }
-	virtual bool wantBuy(const Nieruchomosc& n , int money) { return false; }
+	virtual bool wantSell(const Nieruchomosc& n , const Gracz& g) { return false; }
+	virtual bool wantBuy(const Nieruchomosc& n , const Gracz& g) { return false; }
 protected:
 	bool mozliweDoKupienia(int money, int cena) {
 		return money >= cena;
@@ -47,18 +48,18 @@ protected:
 
 class Smartass : public Strategia {
 public:
-	bool wantBuy(const Nieruchomosc& n , int money) {
-		return mozliweDoKupienia(money , n.getCena());
+	bool wantBuy(const Nieruchomosc& n , const Gracz& g) {
+		return mozliweDoKupienia(g.getMoney(), n.getCena());
 	}
 };
 
 class Dumb : public Strategia {
 public:
-	Dumb() : licznik() {}
-	bool wantBuy(const Nieruchomosc& n , int money) {
+	Dumb() : licznik(0) {}
+	bool wantBuy(const Nieruchomosc& n , const Gracz& g) {
 		nast();
 		if( licznik == 1 ) 
-			return mozliweDoKupienia(money , n.getCena());
+			return mozliweDoKupienia(g.getMoney(), n.getCena());
 		else
 			return false;
 	}
@@ -71,38 +72,58 @@ private:
 	static const int MODULO = 3;
 };
 
-// strategia czlowieka! wazne
 // TO DO
+// - konstruktor + ptr / shrd_ptr na czlowieka
+// do tego gdzies trzeba tworzyc te strategie ( w MojaGrubaRyba)
+// mozna je tworzyc w fabryce
 class Czlowiecza : public Strategia {
 public:
+	bool wantSell(const Nieruchomosc& n) { return czlowiek->wantSell; }
+	bool wantBuy(const Nieruchomosc& n) { return czlowiek->wantBuy; }
 private:
-	// tutaj trzymajmy pointer na czlowieka! wtedy wystarczy zwracac:
-	// return ptr -> wantBuy itd ...
-}
+	// TO DO 
+	// shr_ptr na czlowieka
+};
 
+// TO DO
+//   int plac( ... ) (wywolywana przez pola gdy gracz musi zaplacic)
+//   	sprawdza czy czlowiek nie bankrutuje, zwraca hajs jaki udalo sie zaplacic graczowi
+//   bool wantBuy( ...) 
+//   void wantSell( ... )
 class Gracz {
 public:
+	// TO DO
+	// czy ten kontruktor dobry? (czy mozna tak strategie przekopiowac? )
 	Gracz(std::string nazwa, unsigned int id, Strategia strategia) : nazwa(nazwa),
    							money(POCZATKOWA_KASA), id(id), ile_rund_postoju(0),
 							strategia(strategia) {}
-
-
-	// plac zwraca ilosc kasy jaka graczowi udalo sie zaplacic
-	// ponadto sprawdza czy gracz ma gotowke, i czy czasem nie zbankrutuje
-	// jezeli zbankrutuje to funkcja moze zwrocic wynik t, ze:
-	//		wynik < cena
-	int plac(unsigned int cena); // TO DO
-
-	void giveMoney(unsigned int kasa) { money += kasa; }
+	// TO DO
+	int plac(unsigned int cena);
+	// TO DO
 	bool wantBuy(const Nieruchomosc& n) {
-		return strategia.wantBuy(n, money);
+
+		if( strategia.wantBuy(n, this) ) {
+			// gdy strategia zwroci TRUE ==> mozemy kupic nieruchomosc (stac nas na to)
+			// tutaj dodanie nieruchomosci do vektora!
+			// i odjecie kasy!
+			return true;
+		} else
+			return false;
 	}
+	// TO DO
 	void wantSell(Nieruchomosc& n) {
-		if( strategia.wantSell(n) ) {
+		if( strategia.wantSell(n, this) ) {
 			giveMoney(n.getCena() * KARA_ZA_SPRZEDAZ);
 			n.sprzedana();
+			// TO DO
+			// wywalic nieruchomosc z wektora nieruchomosci!
 		}
 	}
+
+	void postoj(int postoj) { ile_rund_postoju = postoj; }
+	void giveMoney(unsigned int kasa) { money += kasa; }
+	int getMoney() const { return money; }
+	int getId() const { return id; }
 
 private: 
 	std::string nazwa;
@@ -128,7 +149,15 @@ public:
 	virtual void action(Gracz& g) {}
 };
 
+class Wyspa : public Pole {
+	// Wyspa nic nie robi
+};
+
 class Akwarium : public Pole {
+private:
+	static const int ile_tur = 3;
+public:
+	void action(Gracz& g) { g.postoj(ile_tur); }
 };
 
 class Depozyt : public Pole {
@@ -162,11 +191,10 @@ public:
 
 class Start : public Pole {
 private:
-	// czy to tak sie pisało?
 	static const unsigned int nagroda = 50;
 public:
-	void passing(Gracz& g) { this->action(g); }
 	void action(Gracz& g) { g.giveMoney(nagroda); }
+	void passing(Gracz& g) { this->action(g); }
 };
 
 // Interface nieruchomosci
@@ -174,8 +202,9 @@ class Nieruchomosc : public Pole {
 	// czy nieruchomosc tez musi miec virutal destructor ?
 public:
 	virtual ~Nieruchomosc() {}
-	virtual void passing(Gracz& g) {}
-	virtual void action(Gracz& g) = 0; // tutaj kazdy ma swoja akcje!
+	virtual void passing(Gracz& g) {} //domyslnie nic
+	virtual void action(Gracz& g) = 0; 
+
 	unsigned int getCena() const { return cena; }
 	unsigned int getNazwa() const { return nazwa; }
 	void sprzedana() { zajete = false; }
@@ -183,15 +212,13 @@ public:
 protected:
 	bool zajete;
 	unsigned int id_wlasciciela; // pozycja wlasciciela w vektorze graczy
-	// tutaj moze dodac wskaznik na wlasciciela?
-	Gracz& wlasciciel; //, zeby wiedziec komu sie placi
+	Gracz& wlasciciel; // CZy to tak? moze zamiast tego shr_ptr?
 
 	// TO DO
-	bool tenSamWlasciciel(const Gracz& g) const;
 	// oferujac kupno przekazujemy samo pole
 	// gracz sam wyciagnie cene i nazwe przez gety
 	void oferujKupno(Gracz& g);
-
+	bool tenSamWlasciciel(const Gracz& g) const { return g.getId() == id_wlasciciela; }
 private:
 	unsigned int cena;
 	unsigned int stawka;
@@ -204,7 +231,7 @@ public:
    								cena(cena) , stawka(cena * procent) {}
 	void action(Gracz& g);
 private:
-	static const float procent = 4/10;
+	static const float procent = 4.0 / 10;
 };
 
 void Ob_uz_pub::action(Gracz& g) {
@@ -221,7 +248,7 @@ public:
    								cena(cena), stawka(cena * procent) {}
 	void action(Gracz& g);
 private:
-	static const float procent 2/10;
+	static const float procent 2.0 / 10;
 };
 
 void Koralowiec::action(Gracz& g) {
@@ -251,12 +278,15 @@ void Plansza::stworzPlansze_1() {
 class Fabryka {
 public:
 	// TO DO :
-	// pytanie - gdzie zdefiniowac stale ID_AKWARIUM itd..
-	// beda uzywane i w fabryce i w planszy przy jej tworzeniu
+	//
+	// nieruchomosci oprocz ceny powinny miec jeszzcze nazwe!
+	// trzeba to dodac w createPole do nieruchomosci
 	Pole createPole(const pole_key_t& klucz);
 };
 
 Pole Fabryka::createPole(const pole_key_t& k) {
+	if( k.compare(WYSPA) == 0 )
+		return new Wyspa();
 	if( k.compare(AKWARIUM) == 0 )
 		return new Akwarium();
 	if( k.compare(DEPOZYT) == 0 )
