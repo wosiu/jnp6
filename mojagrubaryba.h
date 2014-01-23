@@ -1,8 +1,10 @@
 #ifndef MOJAGRUBARYBA_H
 #define MOJAGRUBARYBA_H
 
+#include <memory>
 #include "grubaryba.h"
 
+// MojaGrubaRyba traktujemy jako 'zarzadce' gry
 class MojaGrubaRyba : public GrubaRyba {
 public:
 	MojaGrubaRyba();
@@ -33,7 +35,17 @@ public:
     void play(unsigned int rounds);
 
 private:
-	Die die;
+	std::shared_ptr<Die> die = nullptr;
+	std::vector<Gracz> gracze;
+	std::vector<Pole> plansza;
+	int ile_bankructw;
+
+	void init_play();
+	bool czy_wygrana();
+	// Sprawdza status gracza w kontekscie nadchodzacego / zakonczonego ruchu.
+	// Zwraca: true - moze sie ruszyc, false - czeka / zbankrutowal.
+	// Wypisuje stosowne komunikaty.
+	bool status( Gracz* gracz );
 };
 
 #endif

@@ -335,33 +335,102 @@ void MojaGrubaRyba::addHumanPlayer(std::shared_ptr<Human> human) {
 
 }
 
-void MojaGrubaRyba::play(unsigned int rounds) {
+// Uwagi:
+// gracz ma miec int& pozycja(), int& gotowka(), postoj() to samo
+
+
+bool MojaGrubaRyba::status( Gracz* gracz ) {
+	if ( gracz->czyBankrut() ) {
+		printf("%s *** bankrut ***\n", gracz->getNazwa() );
+		return false;
+	}
+
+	if ( gracz->postoj() > 0 ) {
+		printf( "%s pole: %s *** czekanie: %d ***\n", gracz->getNazwa(),
+			plansza[gracz->getPozycja()].getNazwa(),
+			gracz->postuj() );
+		gracz->postoj()--;
+		return false;
+	}
+
+	return true;
+}
+
+void MojaGrubaRyba::init_play() {
 	if ( die = nullptr ) {
 		throw NoDieException();
 	}
 	if ( gracze.size() < MIN_GRACZY ) {
 		throw TooFewPlayersException(MIN_GRACZY);
 	}
+	ile_bankructw = 0;
+	// resetujemy stany z poprzedniej rozgrywki
+	for ( size_t i = 0; i < gracze.size(); i++ ) {
+		gracze[i].reset();
+	}
+	for ( size_t i = 0; i < plansza.size(); i++ ) {
+		plansza[i].reset();
+	}
+}
+
+bool MojaGrubaRyba::czy_wygrana() {
+	return ile_banrkuctw == gracze.size() - 1;
+}
+
+void MojaGrubaRyba::play(unsigned int rounds) {
+
+	init_play();
+
 	// iterujemy po rundach
-	for ( auto r = 1; r <= rounds; r++ ) {
+	for ( auto r = 1; r <= rounds && !czy_wygrana(); r++ ) {
 		printf("Runda: %d\n", r);
 		// iterujemy po kolejnych graczach w rundzie
 		for ( size_t g = 0; g < gracze.size(); g++ ) {
 			Gracz* gracz = &gracze[g];
 
-			if ( gracz->getPostoj() > 0 ) {
-				gracz->getPostoj()--;
+			// sprawdza czy gracz moze sie ruszyc w tej rundzie,
+			// wypisuje stosowny komunikat, gdy nie moze
+			if ( !status( gracz ) ) {
 				continue;
 			}
 
-			auto rzut = die.roll() + die.roll();
-			auto poz = gracz.getPozycja();
+			// jesli mozna wylonic zwyciezce, to takowy nie wykonuje
+			// juz ruchu
+			if ( !czy_wygrana() ) {
+				auto rzut = die.roll() + die.roll();
+				auto poz = gracz.pozycja();
+				// zmienna boolowa mowi, czy udalo sie przejsc / stanac na polu
+				// false oznacza bankructwo w wyniku przejscia / staniecia
+				bool ruch = true;
+				// mijamy (rzut - 1) pol
+				for ( int i = 1; i < rzut && ruch; i++ ) {
+					ruch = plansza[( poz + i ) % plansza.size()].
+									przejdz( gracz );
+				}
 
-			// mijamy rzut - 1 pol
-			for ( int i = 1; i < rzut; i++ ) {
-				plansza[( poz + i ) % plansza.size()].przejdz( gracz );
+				// Jesli doszedl pomyslnie do celu.
+				// Wazne, bo np mogl zbankrutowac na polu Depozyt.
+				if ( ruch ) {
+					poz = ( poz + rzut ) % plansza.size();
+					gracz.pozycja() = poz;
+					// pole moze zmienic wyzej domyslnie ustawiona pozycje gracza
+					// takim polem mogloby byc w przyszlosci np "Idź do akwarium"
+					ruch = plansza[poz].stan( gracz );
+				}
+
+				if ( !ruch ) {
+					// zbankrutowal przez ktorys z ruchow w tej turze
+					gracz->czyBankrut = true;
+					ile_bankructw++;
+				}
 			}
-			plansza[(poz + rzut ) % plansza.size()].stan( gracz );
+
+			// sprawdza status po wykonaniu ruchu
+			if ( status( gracz ) ) {
+				printf( "%s pole: %s gotowka: %d\n", gracz->getNazwa(),
+						plansza[gracz->getPozycja()].getNazwa(),
+						gracz->gotowka() );
+			}
 		}
 	}
 }
