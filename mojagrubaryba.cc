@@ -1,9 +1,12 @@
-#include "grubaryba.h"
+#include "mojagrubaryba.h"
+
+// TODO:
+// add no except gdzie trza
 
 typedef std::string pole_key_t;
 
 const unsigned int POCZATKOWA_KASA = 1000;
-const float KARA_ZA_SPRZEDAZ = 1/2;
+const float KARA_ZA_SPRZEDAZ = 1.0 / 2.0;
 
 // do fabryki
 const pole_key_t WYSPA = "wyspa";
@@ -21,19 +24,19 @@ const pole_key_t KORALOWIEC_PENNATULA_400 = "koralowiec_pennatula";
 
 // hierarchia Pola
 class Pole;
-	class Akwarium;
-	class Depozyt;
-	class Kara;
-	class Nagroda;
-	class Start;
-	class Nieruchomosc;
-		class Ob_uz_pub;
-		class Koralowiec;
+class Akwarium;
+class Depozyt;
+class Kara;
+class Nagroda;
+class Start;
+class Nieruchomosc;
+class Ob_uz_pub;
+class Koralowiec;
 // hierarchia Strategii
 class Strategia;
-	class Czlowiecza;
-	class Dumb;
-	class Smartass;
+class Czlowiecza;
+class Dumb;
+class Smartass;
 
 class Strategia {
 public:
@@ -58,7 +61,7 @@ public:
 	Dumb() : licznik(0) {}
 	bool wantBuy(const Nieruchomosc& n , const Gracz& g) {
 		nast();
-		if( licznik == 1 ) 
+		if( licznik == 1 )
 			return mozliweDoKupienia(g.getMoney(), n.getCena());
 		else
 			return false;
@@ -81,15 +84,16 @@ public:
 	bool wantSell(const Nieruchomosc& n) { return czlowiek->wantSell; }
 	bool wantBuy(const Nieruchomosc& n) { return czlowiek->wantBuy; }
 private:
-	// TO DO 
+	// TO DO
 	// shr_ptr na czlowieka
 };
 
 // TO DO
 //   int plac( ... ) (wywolywana przez pola gdy gracz musi zaplacic)
 //   	sprawdza czy czlowiek nie bankrutuje, zwraca hajs jaki udalo sie zaplacic graczowi
-//   bool wantBuy( ...) 
+//   bool wantBuy( ...)
 //   void wantSell( ... )
+// straszne rzeczy tu sie dzieja :<
 class Gracz {
 public:
 	// TO DO
@@ -125,7 +129,7 @@ public:
 	int getMoney() const { return money; }
 	int getId() const { return id; }
 
-private: 
+private:
 	std::string nazwa;
 	int money;
 	unsigned int id; //pozycja w wektorze graczy
@@ -141,12 +145,12 @@ private:
 // Interface pola
 class Pole {
 	// czy tutaj tak jak w javie funkcje abstrakcyjen moga cos robic?
+	// odp: tak.
 public:
-	virtual ~Pole() {}
 	// gdy gracz przechodzi przez pole
-	virtual void passing(Gracz& g) {}
+	virtual void przejdz(Gracz& g) {}
 	// gdy gracz zatrzymuje sie na polu
-	virtual void action(Gracz& g) {}
+	virtual void stan(Gracz& g) {}
 };
 
 class Wyspa : public Pole {
@@ -154,10 +158,8 @@ class Wyspa : public Pole {
 };
 
 class Akwarium : public Pole {
-private:
 	static const int ile_tur = 3;
-public:
-	void action(Gracz& g) { g.postoj(ile_tur); }
+	void stan(Gracz& g) { g.postoj(ile_tur); }
 };
 
 class Depozyt : public Pole {
@@ -166,11 +168,11 @@ private:
 	static const unsigned int stawka = 15;
 public:
 	Depozyt() : gotowka(0) {}
-	void action(Gracz& g) {
+	void stan(Gracz& g) {
 		g.giveMoney(gotowka);
 		gotowka = 0;
 	}
-	void passing(Gracz& g) { g.plac(stawka); }
+	void przejdz(Gracz& g) { g.plac(stawka); }
 };
 
 class Kara : public Pole {
@@ -178,7 +180,7 @@ private:
 	unsigned int kara;
 public:
 	Kara(unsigned int kara) : kara(kara) {}
-	void action(Gracz& g) { g.plac(kara); }
+	void stan(Gracz& g) { g.plac(kara); }
 };
 
 class Nagroda : public Pole {
@@ -186,15 +188,15 @@ private:
 	unsigned int nagroda;
 public:
 	Nagroda(unsigned int nagroda) : nagroda(nagroda) {}
-	void action(Gracz& g) { g.giveMoney(nagroda); }
+	void stan(Gracz& g) { g.giveMoney(nagroda); }
 };
 
 class Start : public Pole {
 private:
 	static const unsigned int nagroda = 50;
 public:
-	void action(Gracz& g) { g.giveMoney(nagroda); }
-	void passing(Gracz& g) { this->action(g); }
+	void stan(Gracz& g) { g.giveMoney(nagroda); }
+	void przejdz(Gracz& g) { this->stan(g); }
 };
 
 // Interface nieruchomosci
@@ -202,8 +204,8 @@ class Nieruchomosc : public Pole {
 	// czy nieruchomosc tez musi miec virutal destructor ?
 public:
 	virtual ~Nieruchomosc() {}
-	virtual void passing(Gracz& g) {} //domyslnie nic
-	virtual void action(Gracz& g) = 0; 
+	virtual void przejdz(Gracz& g) {} //domyslnie nic
+	virtual void stan(Gracz& g) = 0;
 
 	unsigned int getCena() const { return cena; }
 	unsigned int getNazwa() const { return nazwa; }
@@ -229,12 +231,12 @@ class Ob_uz_pub : public Nieruchomosc {
 public:
 	Ob_uz_pub(unsigned int cena) : zajete(false), wlasciciel(0),
    								cena(cena) , stawka(cena * procent) {}
-	void action(Gracz& g);
+	void stan(Gracz& g);
 private:
 	static const float procent = 4.0 / 10;
 };
 
-void Ob_uz_pub::action(Gracz& g) {
+void Ob_uz_pub::stan(Gracz& g) {
 	if( !zajete )
 		oferujKupno(g);
 	else if( !tenSamWlasciciel(g) ) {
@@ -246,12 +248,12 @@ class Koralowiec : public Nieruchomosc {
 public:
 	Koralowiec(unsigned int cena) : zajete(false), wlasciciel(0),
    								cena(cena), stawka(cena * procent) {}
-	void action(Gracz& g);
+	void stan(Gracz& g);
 private:
 	static const float procent 2.0 / 10;
 };
 
-void Koralowiec::action(Gracz& g) {
+void Koralowiec::stan(Gracz& g) {
 	if( !zajete )
 		oferujKupno(g);
 	else if( !tenSamWlasciciel ) {
@@ -315,32 +317,51 @@ Pole Fabryka::createPole(const pole_key_t& k) {
 	return 0; // tutaj mozna cos domyslnie zwrocic
 }
 
-class MojaGrubaRyba : public GrubaRyba {
-public:
-    // Przekazuje prototypową kostkę do gry.
-    // Jeżeli argumentem jest pusty wskaźnik, to nie wykonuje żadnej operacji (ale nie ma błędu).
-    virtual void setDie(std::shared_ptr<Die> die) = 0;
 
-    // Dodaje nowego gracza komputerowego, który gra na zdefiniowanym poziomie.
-    // Nowy gracz komputerowy nazywa się Gracz<Numer>, gdzie <Numer> to numer pozycji,
-    // na której został dodany (numeracja pozycji od 1).
-    // Rzuca TooManyPlayersException, jeśli osiągnięto już maksymalną liczbę graczy.
-    virtual void addComputerPlayer(ComputerLevel level) = 0;
+// ============================ MojaGrubaRyba ==================================
+MojaGrubaRyba::MojaGrubaRyba() {
 
-    // Dodaje nowego gracza czlowieka.
-    // Jeżeli argumentem jest pusty wskaźnik, to nie wykonuje żadnej operacji (ale nie ma błędu).
-    // Rzuca TooManyPlayersException, jeśli osiągnięto już maksymalną liczbę graczy.
-    virtual void addHumanPlayer(std::shared_ptr<Human> human) = 0;
+}
 
-    // Przeprowadza rozgrywkę co najwyżej podanej liczby rund (rozgrywka może
-    // skończyć się wcześniej).
-    // Jedna runda obejmuje po jednym ruchu każdego gracza.
-    // Gracze ruszają się w kolejności, w której zostali dodani.
-    // Na początku każdej rundy wypisywany jest numer rundy,
-    // a na zakończenie informacje podsumowujące dla każdego gracza (format w przykładzie).
-    // Rzuca NoDieException, jeśli nie przekazano kostki.
-    // Rzuca TooFewPlayersException, jeśli liczba graczy nie pozwala na rozpoczęcie gry.
-    virtual void play(unsigned int rounds) = 0;
-private:
-	Die die;
-};
+void MojaGrubaRyba::setDie(std::shared_ptr<Die> die) {
+
+}
+
+void MojaGrubaRyba::addComputerPlayer(ComputerLevel level) {
+
+}
+
+void MojaGrubaRyba::addHumanPlayer(std::shared_ptr<Human> human) {
+
+}
+
+void MojaGrubaRyba::play(unsigned int rounds) {
+	if ( die = nullptr ) {
+		throw NoDieException();
+	}
+	if ( gracze.size() < MIN_GRACZY ) {
+		throw TooFewPlayersException(MIN_GRACZY);
+	}
+	// iterujemy po rundach
+	for ( auto r = 1; r <= rounds; r++ ) {
+		printf("Runda: %d\n", r);
+		// iterujemy po kolejnych graczach w rundzie
+		for ( size_t g = 0; g < gracze.size(); g++ ) {
+			Gracz* gracz = &gracze[g];
+
+			if ( gracz->getPostoj() > 0 ) {
+				gracz->getPostoj()--;
+				continue;
+			}
+
+			auto rzut = die.roll() + die.roll();
+			auto poz = gracz.getPozycja();
+
+			// mijamy rzut - 1 pol
+			for ( int i = 1; i < rzut; i++ ) {
+				plansza[( poz + i ) % plansza.size()].przejdz( gracz );
+			}
+			plansza[(poz + rzut ) % plansza.size()].stan( gracz );
+		}
+	}
+}
