@@ -5,6 +5,9 @@
 #include <vector>
 #include "grubaryba.h"
 
+class Gracz;
+class Plansza;
+
 // MojaGrubaRyba traktujemy jako 'zarzadce' gry
 class MojaGrubaRyba : public GrubaRyba {
 public:
