@@ -94,7 +94,7 @@ public:
 	// TO DO
 	// czy ten kontruktor dobry? (czy mozna tak strategie przekopiowac? )
 	Gracz(std::string nazwa, unsigned int id, Strategia strategia) : nazwa(nazwa),
-   							money(POCZATKOWA_KASA), id(id), ile_rund_postoju(0),
+   							money(POCZATKOWA_KASA), id(id), ileRundPostoju(0),
 							strategia(strategia) , bankrut(false) {}
 	
 	// zwraca hajs jaki udalo sie zaplacic. Gdy brak hajsu -> sprawdza czy gracz
@@ -105,26 +105,31 @@ public:
 	// posiadlosci, dodaje posiadlasc do wektora 'posiadlosci'
 	bool wantBuy(Nieruchomosc* n);
 
-	void postoj(int postoj) { ile_rund_postoju = postoj; }
+	void postoj(int postoj) { ileRundPostoju = postoj; }
 	void giveMoney(unsigned int kasa) { money += kasa; }
+
 	int getMoney() const { return money; }
 	int getId() const { return id; }
+	int getIleRundPostoju() { return ileRundPostoju; }
+
 	int& pozycja() { return pozycja; }
 	bool bankrut() { return bankrut; }
+	// zwraca true gdy gracz nie ma postoju i nie jest bankrutem.
+	// 		--zmniejsza o 1 ileRundPostoju!!
+	bool moznaJechac() {
+		if( ileRundPostoju > 0 ) {
+			ileRundPostoju--;
+			return false;
+		}
+		return bankrut;
+	}
 
-	// TO DO
-	// tutaj jeszcze prawdopodobnie dojdzie funkcja, ktora sprawdza czy
-	// dany gracz moze sie ruszyc (czy jest bankrutem / w akwarium)
-	// funkcja wypisuje odpowiedni komunikat i zwraca boola
-	//
-	//    - status() ZMNIEJSZA ile_rund_postoju !!!!
-	bool status();
 private:
 	std::string nazwa;
 	int money;
 	unsigned int id; //pozycja w wektorze graczy
 	unsigned int pozcja; // pozycja na planszy
-	int ile_rund_postoju;
+	int ileRundPostoju;
 	Strategia strategia;
 	// albo vector ptr na te posiadlosci? chodzi o to zeby to byly TE same obiekty
 	// ktore plansza przechowuje w sobie`
@@ -134,7 +139,7 @@ private:
 	// dodaje kase i wywala sprzedane nieruchomosci z wektora
 	void wantSell();
 };
-
+-
 int Gracz::plac(unsigned int cena) {
 	if( money >= cena ) {
 		money -= cena;
@@ -197,7 +202,7 @@ class Wyspa : public Pole {
 };
 
 class Akwarium : public Pole {
-	static const unsigned int ile_tur = 3;
+	static const unsigned int ile_tur = 2;
 	void stan(std::shared_ptr<Gracz> g) { g->postoj(ile_tur); }
 };
 
@@ -309,14 +314,16 @@ void Koralowiec::stan(std::shared_ptr<Gracz> g) {
 class Plansza {
 public:
 	Plansza() { stworzPlansze_1(); }
+
 	// Rusza graczem, wywoluje odpowiednie funkcje na polach (oferuje kupno,
 	// itd).
 	// ZMIENIA pozycje gracza na mapie !
 	void ruszGracza(std::shared_ptr<Gracz> gracz , int oczka) {
-		//
-		if( gracz->bankrut() ) {
+		if( !gracz->moznaJechac() ) {
 			// wypisujemy status, konczymy funkcje
-			gracz->status();
+			// funkcja moznaJechac zmiejsza ilosc rund postoju danego gracza!
+			// (o ile takie istnieja)
+			wypiszStatus(gracz , true);
 			return;
 		}
 
@@ -334,13 +341,20 @@ public:
 		pola[ost_pozycja]->stan(gracz);
 		
 		// na koncu wypisujemy status!
-		gracz-status(); 
+		wypiszStatus(gracz , false);
 	}
 
 private:
 	vector<std::shared_ptr<Pole> >pola;
 	static Fabryka fabryka; // czy to na pewno tutaj?
 							// jak zrobic zeby tylko jedna sie utworzyla?
+
+	// wypisuje te dziwne rzeczy na wyjscie
+	// WAZNE! gdy czyMozliwyPostoj = true to musimy NAJPEIRW sprawdzic czy gracz
+	// jest bankrutem (i wypisac komunikat o bankrc=uctwie)
+	// jezeli gracz != bankrut i czyMozliwyPostoj == true to
+	//    gracz wlasnie stoi! (postoj nr gracz->getIleRundPostoju() + 1)`
+	void wypiszStatus(std::shared_ptr<Gracz> gracz , bool czyMozliwyPostoj);
 	void stworzPlansze_1();
 };
 
