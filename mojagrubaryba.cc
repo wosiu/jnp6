@@ -8,6 +8,7 @@
 	-- strategia Czlowiecza (konstruktor)
 	-- usuwanie sprzedanej nieruchomosci z wektora nieruchomosci w graczu
 	-- inne drobne rzeczy
+	-- no i te init'y w graczu, planszy itd !
 	*/
 
 
@@ -84,8 +85,8 @@ private:
 // - konstruktor
 class Czlowiecza : public Strategia {
 public:
-	bool wantSell(std::shared_ptr<Nieruchomosc> n) { return czlowiek->wantSell; }
-	bool wantBuy(std::shared_ptr<Nieruchomosc> n) { return czlowiek->wantBuy; }
+	bool wantSell(std::shared_ptr<Nieruchomosc> n , Gracz* g) { return czlowiek->wantSell(n->getNazwa()); }
+	bool wantBuy(std::shared_ptr<Nieruchomosc> n , Gracz* g) { return czlowiek->wantBuy(n->getNazwa()); }
 private:
 	std::shared_ptr<Human> czlowiek;
 };
@@ -348,8 +349,7 @@ void Plansza::ruszGracza(std::shared_ptr<Gracz> gracz , int oczka) {
 	// Sprawdzamy czy bankrut LUB koniec gry
 	if( iluGraczy - ileBankructw == -1 ||
 	 	!gracz->bankrut() ) {
-		// KONIEC GRY! 
-		// wypisujemy komunikat nie zmieniajac stanu gracza!
+		// wypisujemy komunikat
 		wypiszStatus(gracz);
 		return;
 	}
@@ -363,10 +363,10 @@ void Plansza::ruszGracza(std::shared_ptr<Gracz> gracz , int oczka) {
 		return;
 	}
 
-	int ost_pozycja gracz->pozycja();
+	int ost_pozycja = gracz->pozycja();
 	for( int i = 1 ; i <= oczka-1 ; ++i ) {
 		ost_pozycja = (ost_pozycja++) % pola.size();
-		// gdy gracz bankrut to 
+		// gdy gracz bankrut to  break
 		if( gracz->bankrut() )
 			break;
 		// gdy nie bankrut to robimy!
