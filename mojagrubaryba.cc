@@ -1,4 +1,5 @@
 #include "mojagrubaryba.h"
+#include <string>
 
 // TODO:
 // add no except gdzie trza (i moze consty?)
@@ -82,7 +83,7 @@ private:
 	void wantSell();
 
 public:
-	Gracz(std::string nazwa, Strategia strategia) : nazwa(nazwa),
+	Gracz(std::string& nazwa, Strategia& strategia) : nazwa(nazwa),
 			strategia(strategia) {
 		reset();
 	}
@@ -317,20 +318,28 @@ public:
 
 
 // ============================ MojaGrubaRyba ==================================
-MojaGrubaRyba::MojaGrubaRyba() {
-
-}
-
 void MojaGrubaRyba::setDie(std::shared_ptr<Die> die) {
-
+	this.die = die;
 }
 
 void MojaGrubaRyba::addComputerPlayer(ComputerLevel level) {
 
+	std::string nazwa = "Gracz" + std::to_string( gracze.size() );
+
+	switch ( level ) {
+		case DUMP:
+			//TO DO sprawdzic czy pobiernaie referencji z tak stworzonego
+			// obiekty strategii sie nie wysypuje
+			gracze.push_back( Gracz(nazwa, Dump()) );
+			break;
+		case SMARTASS:
+			gracze.push_back( Gracz(nazwa, Smartass()) );
+			break;
+	}
 }
 
 void MojaGrubaRyba::addHumanPlayer(std::shared_ptr<Human> human) {
-
+	gracze.push_back( Gracz(human.lock()->getName(), Czlowiecza(human)) );
 }
 
 bool MojaGrubaRyba::status( Gracz* gracz ) {

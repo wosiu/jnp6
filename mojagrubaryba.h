@@ -2,12 +2,13 @@
 #define MOJAGRUBARYBA_H
 
 #include <memory>
+#include <vector>
 #include "grubaryba.h"
 
 // MojaGrubaRyba traktujemy jako 'zarzadce' gry
 class MojaGrubaRyba : public GrubaRyba {
 public:
-	MojaGrubaRyba();
+	MojaGrubaRyba() {}
 
     // Przekazuje prototypową kostkę do gry.
     // Jeżeli argumentem jest pusty wskaźnik, to nie wykonuje żadnej operacji (ale nie ma błędu).
@@ -42,7 +43,6 @@ private:
 
 	void init_play();
 	bool czy_wygrana();
-
 	// Sprawdza status gracza w kontekscie nadchodzacego / zakonczonego ruchu.
 	// Zwraca: true - moze sie ruszyc, false - czeka / zbankrutowal.
 	// Wypisuje stosowne komunikaty.
