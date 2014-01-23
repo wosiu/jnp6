@@ -41,28 +41,25 @@ class Smartass;
 class Strategia {
 public:
 	// domyslnie zwracaja false
-	virtual bool wantSell(const Nieruchomosc& n , const Gracz& g) { return false; }
-	virtual bool wantBuy(const Nieruchomosc& n , const Gracz& g) { return false; }
-protected:
-	bool mozliweDoKupienia(int money, int cena) {
-		return money >= cena;
-	}
+	virtual bool wantSell(std::shared_ptr<Nieruchomosc> n , Gracz* g) { return false; }
+	// WAZNE!!
+	// funkcje wywolujemy WTW gracz g ma odpowiednia ilosc gotowki do kupna!
+	virtual bool wantBuy(std::shared_ptr<Nieruchomosc> n , Gracz* g) { return false; }
 };
 
 class Smartass : public Strategia {
 public:
-	bool wantBuy(const Nieruchomosc& n , const Gracz& g) {
-		return mozliweDoKupienia(g.getMoney(), n.getCena());
-	}
+	// bo ma odpowiednia ilosc gotowki!
+	bool wantBuy(std::shared_ptr<Nieruchomosc> n , Gracz* g) { true }
 };
 
 class Dumb : public Strategia {
 public:
 	Dumb() : licznik(0) {}
-	bool wantBuy(const Nieruchomosc& n , const Gracz& g) {
+	bool wantBuy(std::shared_ptr<Nieruchomosc> n , Gracz* g) {
 		nast();
 		if( licznik == 1 )
-			return mozliweDoKupienia(g.getMoney(), n.getCena());
+			return true;
 		else
 			return false;
 	}
@@ -81,17 +78,15 @@ private:
 // mozna je tworzyc w fabryce
 class Czlowiecza : public Strategia {
 public:
-	bool wantSell(const Nieruchomosc& n) { return czlowiek->wantSell; }
-	bool wantBuy(const Nieruchomosc& n) { return czlowiek->wantBuy; }
+	bool wantSell(std::shared_ptr<Nieruchomosc> n) { return czlowiek->wantSell; }
+	bool wantBuy(std::shared_ptr<Nieruchomosc> n) { return czlowiek->wantBuy; }
 private:
 	// TO DO
 	// shr_ptr na czlowieka
+	std::shared_ptr<Human> czlowiek;
 };
 
 // TO DO
-//   int plac( ... ) (wywolywana przez pola gdy gracz musi zaplacic)
-//   	sprawdza czy czlowiek nie bankrutuje, zwraca hajs jaki udalo sie zaplacic graczowi
-//   bool wantBuy( ...)
 //   void wantSell( ... )
 // straszne rzeczy tu sie dzieja :<
 class Gracz {
@@ -100,47 +95,91 @@ public:
 	// czy ten kontruktor dobry? (czy mozna tak strategie przekopiowac? )
 	Gracz(std::string nazwa, unsigned int id, Strategia strategia) : nazwa(nazwa),
    							money(POCZATKOWA_KASA), id(id), ile_rund_postoju(0),
-							strategia(strategia) {}
-	// TO DO
+							strategia(strategia) , bankrut(false) {}
+	
+	// zwraca hajs jaki udalo sie zaplacic. Gdy brak hajsu -> sprawdza czy gracz
+	// chce sprzedac posiadlosci. Gdy po sprzedaniu nadal brak kasy ->
+	// gracz bankrutuje a funkcja zwraca pozostala kase
 	int plac(unsigned int cena);
-	// TO DO
-	bool wantBuy(const Nieruchomosc& n) {
-
-		if( strategia.wantBuy(n, this) ) {
-			// gdy strategia zwroci TRUE ==> mozemy kupic nieruchomosc (stac nas na to)
-			// tutaj dodanie nieruchomosci do vektora!
-			// i odjecie kasy!
-			return true;
-		} else
-			return false;
-	}
-	// TO DO
-	void wantSell(Nieruchomosc& n) {
-		if( strategia.wantSell(n, this) ) {
-			giveMoney(n.getCena() * KARA_ZA_SPRZEDAZ);
-			n.sprzedana();
-			// TO DO
-			// wywalic nieruchomosc z wektora nieruchomosci!
-		}
-	}
+	// true gdy gracz chce kupic nieruchomosc. Odejmuje od money cene
+	// posiadlosci, dodaje posiadlasc do wektora 'posiadlosci'
+	bool wantBuy(Nieruchomosc* n);
 
 	void postoj(int postoj) { ile_rund_postoju = postoj; }
 	void giveMoney(unsigned int kasa) { money += kasa; }
 	int getMoney() const { return money; }
 	int getId() const { return id; }
+	int& pozycja() { return pozycja; }
+	bool bankrut() { return bankrut; }
 
+	// TO DO
+	// tutaj jeszcze prawdopodobnie dojdzie funkcja, ktora sprawdza czy
+	// dany gracz moze sie ruszyc (czy jest bankrutem / w akwarium)
+	// funkcja wypisuje odpowiedni komunikat i zwraca boola
+	//
+	//    - status() ZMNIEJSZA ile_rund_postoju !!!!
+	bool status();
 private:
 	std::string nazwa;
 	int money;
 	unsigned int id; //pozycja w wektorze graczy
-
+	unsigned int pozcja; // pozycja na planszy
 	int ile_rund_postoju;
 	Strategia strategia;
 	// albo vector ptr na te posiadlosci? chodzi o to zeby to byly TE same obiekty
 	// ktore plansza przechowuje w sobie`
-	std::vector<Nieruchomosc> posiadlosci;
+	std::vector<std::shared_ptr<Nieruchomosc> > posiadlosci;
+	bool bankrut;
+	// sprawdza czy gracz chce sprzedac nieruchomosci. jesli tak, to
+	// dodaje kase i wywala sprzedane nieruchomosci z wektora
+	void wantSell();
 };
 
+int Gracz::plac(unsigned int cena) {
+	if( money >= cena ) {
+		money -= cena;
+		return cena;
+	} else {
+		// sprawdzamy czy chce sprzedac posiadlosci
+		wantSell();
+
+		if( money >= cena ) {
+			money -= cena;
+			return cena;
+		} else {
+			// BANKRUTUJEMY
+			bankrut = true;
+			return money;
+		}
+	}
+}
+
+bool Gracz::wantBuy(Nieruchomosc* n) {
+	if( money < n->getCena() )
+		wantSell();
+	if(money < n->getCena() )
+		return false;
+
+	// tutaj mamy pewnosc ze gracz ma odpowiednia ilosc gotowki do kupna n!
+	if( strategia.wantBuy(n, this) ) {
+		// gdy strategia zwroci TRUE ==> mozemy kupic nieruchomosc (stac nas na to)
+		money -= n.getCena();
+		posiadlosci.push_back( std::shared_ptr (n) ); // czy to jest dobrze? TO DO
+		return true;
+	} else
+		return false;
+}
+
+void Gracz::wantSell();
+	for( auto n : posiadlosci )
+		if( strategia.wantSell(n, this) ) {
+			giveMoney(n->getCena() * KARA_ZA_SPRZEDAZ);
+			n.sprzedana();
+			// TO DO
+			// wywalic nieruchomosc z wektora nieruchomosci!
+			// jak porownywac pointery !?
+		}
+}
 
 // Interface pola
 class Pole {
@@ -148,9 +187,9 @@ class Pole {
 	// odp: tak.
 public:
 	// gdy gracz przechodzi przez pole
-	virtual void przejdz(Gracz& g) {}
+	virtual void przejdz(std::shared_ptr<Gracz> g) {}
 	// gdy gracz zatrzymuje sie na polu
-	virtual void stan(Gracz& g) {}
+	virtual void stan(std::shared_ptr<Gracz> g) {}
 };
 
 class Wyspa : public Pole {
@@ -158,8 +197,8 @@ class Wyspa : public Pole {
 };
 
 class Akwarium : public Pole {
-	static const int ile_tur = 3;
-	void stan(Gracz& g) { g.postoj(ile_tur); }
+	static const unsigned int ile_tur = 3;
+	void stan(std::shared_ptr<Gracz> g) { g->postoj(ile_tur); }
 };
 
 class Depozyt : public Pole {
@@ -168,11 +207,11 @@ private:
 	static const unsigned int stawka = 15;
 public:
 	Depozyt() : gotowka(0) {}
-	void stan(Gracz& g) {
-		g.giveMoney(gotowka);
+	void stan(std::shared_ptr<Gracz> g) {
+		g->giveMoney(gotowka);
 		gotowka = 0;
 	}
-	void przejdz(Gracz& g) { g.plac(stawka); }
+	void przejdz(std::shared_ptr<Gracz> g) { g->plac(stawka); }
 };
 
 class Kara : public Pole {
@@ -180,7 +219,7 @@ private:
 	unsigned int kara;
 public:
 	Kara(unsigned int kara) : kara(kara) {}
-	void stan(Gracz& g) { g.plac(kara); }
+	void stan(std::shared_ptr<Gracz> g) { g->plac(kara); }
 };
 
 class Nagroda : public Pole {
@@ -188,15 +227,15 @@ private:
 	unsigned int nagroda;
 public:
 	Nagroda(unsigned int nagroda) : nagroda(nagroda) {}
-	void stan(Gracz& g) { g.giveMoney(nagroda); }
+	void stan(std::shared_ptr<Gracz> g) { g->giveMoney(nagroda); }
 };
 
 class Start : public Pole {
 private:
 	static const unsigned int nagroda = 50;
 public:
-	void stan(Gracz& g) { g.giveMoney(nagroda); }
-	void przejdz(Gracz& g) { this->stan(g); }
+	void stan(std::shared_ptr<Gracz> g) { g->giveMoney(nagroda); }
+	void przejdz(std::shared_ptr<Gracz> g) { this->stan(g); }
 };
 
 // Interface nieruchomosci
@@ -204,8 +243,8 @@ class Nieruchomosc : public Pole {
 	// czy nieruchomosc tez musi miec virutal destructor ?
 public:
 	virtual ~Nieruchomosc() {}
-	virtual void przejdz(Gracz& g) {} //domyslnie nic
-	virtual void stan(Gracz& g) = 0;
+	virtual void przejdz(std::shared_ptr<Gracz> g) {} //domyslnie nic
+	virtual void stan(std::shared_ptr<Gracz> g) = 0;
 
 	unsigned int getCena() const { return cena; }
 	unsigned int getNazwa() const { return nazwa; }
@@ -214,33 +253,39 @@ public:
 protected:
 	bool zajete;
 	unsigned int id_wlasciciela; // pozycja wlasciciela w vektorze graczy
-	Gracz& wlasciciel; // CZy to tak? moze zamiast tego shr_ptr?
+	std::shared_ptr<Gracz> wlasciciel;
 
-	// TO DO
-	// oferujac kupno przekazujemy samo pole
-	// gracz sam wyciagnie cene i nazwe przez gety
-	void oferujKupno(Gracz& g);
-	bool tenSamWlasciciel(const Gracz& g) const { return g.getId() == id_wlasciciela; }
+	void oferujKupno(std::shared_ptr<Gracz> g);
+	bool tenSamWlasciciel(const std::shared_ptr<Gracz> g) const { return g->getId() == id_wlasciciela; }
 private:
 	unsigned int cena;
 	unsigned int stawka;
 	std::string nazwa; //potrzebne do przekazywania Humanowi czy chce kupic
 };
 
+void Nieruchomosc::oferujKupno(std::shared_ptr<Gracz> g) {
+	if( g->wantBuy(this) ) {
+		zajete = true;
+		id_wlasciciela = g->getId();
+		// czy to jest dobrze? z tym shared_ptr przypisanie?
+		wlasciciel = g;
+	}
+}
+
 class Ob_uz_pub : public Nieruchomosc {
 public:
 	Ob_uz_pub(unsigned int cena) : zajete(false), wlasciciel(0),
    								cena(cena) , stawka(cena * procent) {}
-	void stan(Gracz& g);
+	void stan(std::shared_ptr<Gracz> g);
 private:
 	static const float procent = 4.0 / 10;
 };
 
-void Ob_uz_pub::stan(Gracz& g) {
+void Ob_uz_pub::stan(std::shared_ptr<Gracz> g) {
 	if( !zajete )
 		oferujKupno(g);
 	else if( !tenSamWlasciciel(g) ) {
-		wlasciciel.giveMoney( g.plac(stawka) );
+		wlasciciel->giveMoney( g->plac(stawka) );
 	}
 }
 
@@ -248,24 +293,52 @@ class Koralowiec : public Nieruchomosc {
 public:
 	Koralowiec(unsigned int cena) : zajete(false), wlasciciel(0),
    								cena(cena), stawka(cena * procent) {}
-	void stan(Gracz& g);
+	void stan(std::shared_ptr<Gracz> g);
 private:
 	static const float procent 2.0 / 10;
 };
 
-void Koralowiec::stan(Gracz& g) {
+void Koralowiec::stan(std::shared_ptr<Gracz> g) {
 	if( !zajete )
 		oferujKupno(g);
 	else if( !tenSamWlasciciel ) {
-		wlasciciel.giveMoney( g.plac(stawka) );
+		wlasciciel->giveMoney( g->plac(stawka) );
 	}
 }
 
 class Plansza {
 public:
 	Plansza() { stworzPlansze_1(); }
+	// Rusza graczem, wywoluje odpowiednie funkcje na polach (oferuje kupno,
+	// itd).
+	// ZMIENIA pozycje gracza na mapie !
+	void ruszGracza(std::shared_ptr<Gracz> gracz , int oczka) {
+		//
+		if( gracz->bankrut() ) {
+			// wypisujemy status, konczymy funkcje
+			gracz->status();
+			return;
+		}
+
+		int ost_pozycja gracz->pozycja();
+		for( int i = 1 ; i <= oczka-1 ; ++i ) {
+			ost_pozycja = (ost_pozycja++) % pola.size();
+			if( !gracz->bankrut() )
+				// gdy nie bankrut to robimy!
+				// mogl zbankrutowac po drodze na depozycie!
+				pola[ost_pozycja]->przejdz(gracz);
+		}
+		ost_pozycja = (ost_pozycja++) % pola.size();
+		// referencja
+		gracz->pozycja() = ost_pozycja;
+		pola[ost_pozycja]->stan(gracz);
+		
+		// na koncu wypisujemy status!
+		gracz-status(); 
+	}
+
 private:
-	vector<Pole> pola;
+	vector<std::shared_ptr<Pole> >pola;
 	static Fabryka fabryka; // czy to na pewno tutaj?
 							// jak zrobic zeby tylko jedna sie utworzyla?
 	void stworzPlansze_1();
@@ -286,6 +359,8 @@ public:
 	Pole createPole(const pole_key_t& klucz);
 };
 
+// TO DO
+// tutaj tworzymy jednak shared_ptr!!;
 Pole Fabryka::createPole(const pole_key_t& k) {
 	if( k.compare(WYSPA) == 0 )
 		return new Wyspa();
@@ -374,13 +449,20 @@ void MojaGrubaRyba::init_play() {
 }
 
 bool MojaGrubaRyba::czy_wygrana() {
-	return ile_banrkuctw == gracze.size() - 1;
+	return ile_bankructw == gracze.size() - 1;
 }
 
 void MojaGrubaRyba::play(unsigned int rounds) {
 
 	init_play();
 
+	/*
+	   TUTAJ IMO:
+	   iterujemy po rundach
+	   		iterujemy po graczach
+				rzucamy koscmi, wywolujemy plansza.ruszGracza(Gracz , wyrzucone_oczka)
+				ta funkcja zajmuje sie juz wszystkim!
+		*/
 	// iterujemy po rundach
 	for ( auto r = 1; r <= rounds && !czy_wygrana(); r++ ) {
 		printf("Runda: %d\n", r);
