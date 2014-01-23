@@ -1,7 +1,15 @@
 #include "mojagrubaryba.h"
 
 // TODO:
-// add no except gdzie trza
+// add no except gdzie trza (i moze consty?)
+
+/** TODO:
+	-- dodawanie graczy ( do tego fabryka , kontruktor Gracza tez mozna zmienic )
+	-- strategia Czlowiecza (konstruktor)
+	-- usuwanie sprzedanej nieruchomosci z wektora nieruchomosci w graczu
+	-- inne drobne rzeczy
+	*/
+
 
 typedef std::string pole_key_t;
 
@@ -9,18 +17,18 @@ const unsigned int POCZATKOWA_KASA = 1000;
 const float KARA_ZA_SPRZEDAZ = 1.0 / 2.0;
 
 // do fabryki
-const pole_key_t WYSPA = "wyspa";
-const pole_key_t AKWARIUM = "akwarium";
-const pole_key_t DEPOZYT = "depozyt";
-const pole_key_t KARA_REKIN_180 = "kara_rekin";
-const pole_key_t NAGRODA_BLAZENKI_120 = "nagroda_blazenki";
-const pole_key_t START = "start";
-const pole_key_t OB_UZ_PUB_GROTA_300 = "ob_uz_pub_grota";
-const pole_key_t OB_UZ_PUB_STATEK_250 = "ob_uz_pub_statek";
-const pole_key_t KORALOWIEC_ANEMONIA_160 = "koralowiec_anemonia";
-const pole_key_t KORALOWIEC_APORINA_220 = "koralowiec_aporina";
-const pole_key_t KORALOWIEC_MENELLA_280 = "koralowiec_menella";
-const pole_key_t KORALOWIEC_PENNATULA_400 = "koralowiec_pennatula";
+const pole_key_t WYSPA = "Wyspa";
+const pole_key_t AKWARIUM = "Akwarium";
+const pole_key_t DEPOZYT = "Depozyt";
+const pole_key_t KARA_REKIN_180 = "Rekin";
+const pole_key_t NAGRODA_BLAZENKI_120 = "Blazenki";
+const pole_key_t START = "Start";
+const pole_key_t OB_UZ_PUB_GROTA_300 = "Grota";
+const pole_key_t OB_UZ_PUB_STATEK_250 = "Statek";
+const pole_key_t KORALOWIEC_ANEMONIA_160 = "Anemonia";
+const pole_key_t KORALOWIEC_APORINA_220 = "Aporina";
+const pole_key_t KORALOWIEC_MENELLA_280 = "Menella";
+const pole_key_t KORALOWIEC_PENNATULA_400 = "Pennatula";
 
 // hierarchia Pola
 class Pole;
@@ -72,30 +80,26 @@ private:
 	static const int MODULO = 3;
 };
 
-// TO DO
-// - konstruktor + ptr / shrd_ptr na czlowieka
-// do tego gdzies trzeba tworzyc te strategie ( w MojaGrubaRyba)
-// mozna je tworzyc w fabryce
+// TODO
+// - konstruktor
 class Czlowiecza : public Strategia {
 public:
 	bool wantSell(std::shared_ptr<Nieruchomosc> n) { return czlowiek->wantSell; }
 	bool wantBuy(std::shared_ptr<Nieruchomosc> n) { return czlowiek->wantBuy; }
 private:
-	// TO DO
-	// shr_ptr na czlowieka
 	std::shared_ptr<Human> czlowiek;
 };
 
-// TO DO
-//   void wantSell( ... )
-// straszne rzeczy tu sie dzieja :<
+// TODO
+//   --void wantSell( ... ) - tylko wywalanie sprzedanej nieruchomosci z wektora 'posiadlosci'
+// straszne rzeczy tu sie dzieja :< --( wazne ze dziala xD chyba)
 class Gracz {
 public:
-	// TO DO
-	// czy ten kontruktor dobry? (czy mozna tak strategie przekopiowac? )
-	Gracz(std::string nazwa, unsigned int id, Strategia strategia) : nazwa(nazwa),
-   							money(POCZATKOWA_KASA), id(id), ileRundPostoju(0),
-							strategia(strategia) , bankrut(false) {}
+	// TODO
+	// to mozna zmienic jakby co... zeby bardziej pasowalo przy tworzeniu graczy
+	Gracz(std::string nazwa, unsigned int pozycja_w_wektorze, Strategia strategia)
+	   					: nazwa(nazwa),	money(POCZATKOWA_KASA), id(pozycja_w_wektorze), ileRundPostoju(0),
+						strategia(strategia) , bankrut(false) {}
 	
 	// zwraca hajs jaki udalo sie zaplacic. Gdy brak hajsu -> sprawdza czy gracz
 	// chce sprzedac posiadlosci. Gdy po sprzedaniu nadal brak kasy ->
@@ -110,19 +114,9 @@ public:
 
 	int getMoney() const { return money; }
 	int getId() const { return id; }
-	int getIleRundPostoju() { return ileRundPostoju; }
-
+	int& getIleRundPostoju() { return ileRundPostoju; }
 	int& pozycja() { return pozycja; }
-	bool bankrut() { return bankrut; }
-	// zwraca true gdy gracz nie ma postoju i nie jest bankrutem.
-	// 		--zmniejsza o 1 ileRundPostoju!!
-	bool moznaJechac() {
-		if( ileRundPostoju > 0 ) {
-			ileRundPostoju--;
-			return false;
-		}
-		return bankrut;
-	}
+	bool bankrut() const { return bankrut; }
 
 private:
 	std::string nazwa;
@@ -130,11 +124,11 @@ private:
 	unsigned int id; //pozycja w wektorze graczy
 	unsigned int pozcja; // pozycja na planszy
 	int ileRundPostoju;
+
 	Strategia strategia;
-	// albo vector ptr na te posiadlosci? chodzi o to zeby to byly TE same obiekty
-	// ktore plansza przechowuje w sobie`
 	std::vector<std::shared_ptr<Nieruchomosc> > posiadlosci;
 	bool bankrut;
+
 	// sprawdza czy gracz chce sprzedac nieruchomosci. jesli tak, to
 	// dodaje kase i wywala sprzedane nieruchomosci z wektora
 	void wantSell();
@@ -145,7 +139,7 @@ int Gracz::plac(unsigned int cena) {
 		money -= cena;
 		return cena;
 	} else {
-		// sprawdzamy czy chce sprzedac posiadlosci
+		// BRAK KASY - sprawdzamy czy chce sprzedac posiadlosci
 		wantSell();
 
 		if( money >= cena ) {
@@ -159,6 +153,7 @@ int Gracz::plac(unsigned int cena) {
 	}
 }
 
+// wantBuy wywolywane jest w nieruchomosciach w funkcji stan(...);
 bool Gracz::wantBuy(Nieruchomosc* n) {
 	if( money < n->getCena() )
 		wantSell();
@@ -167,9 +162,8 @@ bool Gracz::wantBuy(Nieruchomosc* n) {
 
 	// tutaj mamy pewnosc ze gracz ma odpowiednia ilosc gotowki do kupna n!
 	if( strategia.wantBuy(n, this) ) {
-		// gdy strategia zwroci TRUE ==> mozemy kupic nieruchomosc (stac nas na to)
 		money -= n.getCena();
-		posiadlosci.push_back( std::shared_ptr (n) ); // czy to jest dobrze? TO DO
+		posiadlosci.push_back( std::shared_ptr (n) ); // czy to jest dobrze? TODO
 		return true;
 	} else
 		return false;
@@ -180,21 +174,29 @@ void Gracz::wantSell();
 		if( strategia.wantSell(n, this) ) {
 			giveMoney(n->getCena() * KARA_ZA_SPRZEDAZ);
 			n.sprzedana();
-			// TO DO
-			// wywalic nieruchomosc z wektora nieruchomosci!
+			// TODO
+			// wywalic 'n' z wektora 'posiadlosci'
+			// mm nadzieje ze mozna to w petli FOR EACH robic ...
 			// jak porownywac pointery !?
 		}
 }
 
 // Interface pola
+
+// TODO:
+// do wszystkich klas dotyczacych pola trzeba dodac konstruktor
+// przyjmujacy nazwe (albo sam parametr gdy konsturktor juz jest)
+//  uwaga: nazwa ma byc OSTATNIM PARAMETREM (tak w fabryce tworzy sie)
 class Pole {
-	// czy tutaj tak jak w javie funkcje abstrakcyjen moga cos robic?
-	// odp: tak.
 public:
 	// gdy gracz przechodzi przez pole
 	virtual void przejdz(std::shared_ptr<Gracz> g) {}
 	// gdy gracz zatrzymuje sie na polu
 	virtual void stan(std::shared_ptr<Gracz> g) {}
+	std::string getNazwa() { return nazwa; }
+
+protected:
+	std::string nazwa; //TODO
 };
 
 class Wyspa : public Pole {
@@ -202,7 +204,7 @@ class Wyspa : public Pole {
 };
 
 class Akwarium : public Pole {
-	static const unsigned int ile_tur = 2;
+	static const unsigned int ile_tur = 3;
 	void stan(std::shared_ptr<Gracz> g) { g->postoj(ile_tur); }
 };
 
@@ -272,7 +274,9 @@ void Nieruchomosc::oferujKupno(std::shared_ptr<Gracz> g) {
 	if( g->wantBuy(this) ) {
 		zajete = true;
 		id_wlasciciela = g->getId();
+		// TODO
 		// czy to jest dobrze? z tym shared_ptr przypisanie?
+		//  std::shared_ptr<Gracz> wlasciciel
 		wlasciciel = g;
 	}
 }
@@ -314,50 +318,94 @@ void Koralowiec::stan(std::shared_ptr<Gracz> g) {
 class Plansza {
 public:
 	Plansza() { stworzPlansze_1(); }
-
-	// Rusza graczem, wywoluje odpowiednie funkcje na polach (oferuje kupno,
-	// itd).
+	
+	// wywolywana po kazdym ruchu gracza przez funkcje play
+	void aktualizujBankructwa(int bankructwa) { ileBankructw = bankructwa; }
+	// wywolywana jednorazowo przed gra!
+	void aktualizujGraczy(unsigned int gracze) { iluGraczy = gracze; }
+	// Rusza graczem, wywoluje odpowiednie funkcje na polach (stan i przejdz)
 	// ZMIENIA pozycje gracza na mapie !
-	void ruszGracza(std::shared_ptr<Gracz> gracz , int oczka) {
-		if( !gracz->moznaJechac() ) {
-			// wypisujemy status, konczymy funkcje
-			// funkcja moznaJechac zmiejsza ilosc rund postoju danego gracza!
-			// (o ile takie istnieja)
-			wypiszStatus(gracz , true);
-			return;
-		}
-
-		int ost_pozycja gracz->pozycja();
-		for( int i = 1 ; i <= oczka-1 ; ++i ) {
-			ost_pozycja = (ost_pozycja++) % pola.size();
-			if( !gracz->bankrut() )
-				// gdy nie bankrut to robimy!
-				// mogl zbankrutowac po drodze na depozycie!
-				pola[ost_pozycja]->przejdz(gracz);
-		}
-		ost_pozycja = (ost_pozycja++) % pola.size();
-		// referencja
-		gracz->pozycja() = ost_pozycja;
-		pola[ost_pozycja]->stan(gracz);
-		
-		// na koncu wypisujemy status!
-		wypiszStatus(gracz , false);
-	}
+	// gdy liczba bankrutow osiagnie liczbaGraczy -1 -- nie robi nic! tylko komunikat
+	void ruszGracza(std::shared_ptr<Gracz> gracz , int oczka);
 
 private:
 	vector<std::shared_ptr<Pole> >pola;
-	static Fabryka fabryka; // czy to na pewno tutaj?
-							// jak zrobic zeby tylko jedna sie utworzyla?
+	static Fabryka fabryka; 
 
 	// wypisuje te dziwne rzeczy na wyjscie
-	// WAZNE! gdy czyMozliwyPostoj = true to musimy NAJPEIRW sprawdzic czy gracz
-	// jest bankrutem (i wypisac komunikat o bankrc=uctwie)
-	// jezeli gracz != bankrut i czyMozliwyPostoj == true to
-	//    gracz wlasnie stoi! (postoj nr gracz->getIleRundPostoju() + 1)`
-	void wypiszStatus(std::shared_ptr<Gracz> gracz , bool czyMozliwyPostoj);
+	// w kolejnosci :
+    // --	bankrut 
+	// --	jesli nie bankrut to POSTOJ + gracz->postoj()--;
+	// --	jesli nie to reszta
+	void wypiszStatus(std::shared_ptr<Gracz> gracz);
 	void stworzPlansze_1();
+	int iluGraczy; // tuz przed gra nadawana wartosc !
+	int ileBankructw = 0;
 };
 
+// OP funkcja!
+void Plansza::ruszGracza(std::shared_ptr<Gracz> gracz , int oczka) {
+	// Sprawdzamy czy bankrut LUB koniec gry
+	if( iluGraczy - ileBankructw == -1 ||
+	 	!gracz->bankrut() ) {
+		// KONIEC GRY! 
+		// wypisujemy komunikat nie zmieniajac stanu gracza!
+		wypiszStatus(gracz);
+		return;
+	}
+
+	// Sprawdzamy czy gracz stoi
+	if( gracz->ileRundPostoju() > 0 ) {
+		// WAZNE! dopiero tutaj zmiejszamy postoje, gdy wiemy, ze
+		// gracz NIE jest bankrutem i NIE MA konca gry
+		gracz->ileRundPostoju()--;
+		wypiszStatus(gracz);
+		return;
+	}
+
+	int ost_pozycja gracz->pozycja();
+	for( int i = 1 ; i <= oczka-1 ; ++i ) {
+		ost_pozycja = (ost_pozycja++) % pola.size();
+		// gdy gracz bankrut to 
+		if( gracz->bankrut() )
+			break;
+		// gdy nie bankrut to robimy!
+		// mogl zbankrutowac po drodze na depozycie!
+		pola[ost_pozycja]->przejdz(gracz);
+	}
+	// jesli bankrut to pozycja bedzie zla (gdy zbankrutowal przechodza przez depozyt --> break )
+    // ale i tak to nie ma znaczenia
+	ost_pozycja = (ost_pozycja++) % pola.size();
+	// referencja
+	gracz->pozycja() = ost_pozycja;
+	// gdy nie zbankrutowal po dordze to uruchamiamy pole na ktorym stanal
+	if( !gracz->bankrut() )
+		pola[ost_pozycja]->stan(gracz);
+	
+	// na koncu wypisujemy status!
+	wypiszStatus(gracz);
+}
+
+void Plansza::wypiszStatus(std::shared_ptr<Gracz> gracz) {
+	if ( gracz->czyBankrut() ) {
+		printf("%s *** bankrut ***\n", gracz->getNazwa() );
+		return;
+	}
+
+	if ( gracz->ileRundPostoju() > 0 ) {
+		printf( "%s pole: %s *** czekanie: %d ***\n", gracz->getNazwa(),
+			pola[gracz->pozycja()].getNazwa(),
+			gracz->ileRundPostoju() );
+		return;
+	}
+	
+	// TUTAJ wiemy ze NIE bankrut i NIE postoj
+	printf( "%s pole: %s gotowka: %d\n", gracz->getNazwa(),
+			pola[gracz->pozycja()].getNazwa(),
+			gracz->getMoney() );
+}
+
+// TODO - to w sumie mozna od razu do contruktora wrzucic. i wywalic stworzPlansze_1
 void Plansza::stworzPlansze_1() {
 	pola.clear(); // czy jak to tam sie nazywa
 	pola.push_back(f.createPole(START)); // itd!
@@ -366,42 +414,38 @@ void Plansza::stworzPlansze_1() {
 
 class Fabryka {
 public:
-	// TO DO :
-	//
-	// nieruchomosci oprocz ceny powinny miec jeszzcze nazwe!
-	// trzeba to dodac w createPole do nieruchomosci
 	Pole createPole(const pole_key_t& klucz);
 };
 
-// TO DO
-// tutaj tworzymy jednak shared_ptr!!;
+// TODO
+// tutaj tworzymy jednak shared_ptr!!; trzeba zmienic!
 Pole Fabryka::createPole(const pole_key_t& k) {
 	if( k.compare(WYSPA) == 0 )
-		return new Wyspa();
+		return new Wyspa(WYSPA);
 	if( k.compare(AKWARIUM) == 0 )
-		return new Akwarium();
+		return new Akwarium(AKWARIUM);
 	if( k.compare(DEPOZYT) == 0 )
-		return new Depozyt();
+		return new Depozyt(DEPOZYT);
 	if( k.compare(KARA_REKIN_180) == 0 )
-		return new Kara(180);
+		return new Kara(180 , KARA_REKIN_180);
 	if( k.compare(NAGRODA_BLAZENKI_120) == 0 )
-		return new Nagroda(120);
+		return new Nagroda(120 , NAGRODA_BLAZENKI_120);
 	if( k.compare(START) == 0 )
-		return new Start();
+		return new Start(START);
 	// Obiekty uzyteczonsci publicznej:
 	if( k.compare(OB_UZ_PUB_STATEK_250) == 0 )
-		return new Ob_uz_pub(250);
+		return new Ob_uz_pub(250 , OB_UZ_PUB_STATEK_250);
 	if( k.compare(OB_UZ_PUB_GROTA_300) == 0 )
-		return new Ob_uz_pub(300);
+		return new Ob_uz_pub(300 , OB_UZ_PUB_GROTA_300);
 	// Koralowce:
 	if( k.compare(KORALOWIEC_ANEMONIA_160) == 0 )
-		return new Koralowiec(160);
+		return new Koralowiec(160 , KORALOWIEC_ANEMONIA_160);
 	if( k.compare(KORALOWIEC_APORINA_220) == 0 )
-		return nwe Koralowiec(220);
+		return nwe Koralowiec(220 , KORALOWIEC_APORINA_220);
 	if( k.compare(KORALOWIEC_MENELLA_280) == 0 )
-		return new Koralowiec(280);
+		return new Koralowiec(280 , KORALOWIEC_MENELLA_280);
 	if( k.compare(KORALOWIEC_PENNATULA_400) == 0 )
-		return new Koralowiec(400);
+		return new Koralowiec(400 , KORALOWIEC_PENNATULA_400);
 
 	return 0; // tutaj mozna cos domyslnie zwrocic
 }
@@ -462,14 +506,24 @@ void MojaGrubaRyba::init_play() {
 	}
 }
 
+int MojaGrubaRyba::liczBankructwa() {
+	int wynik = 0;
+	for( size_t g = 0 ; g < gracze.size() ; g++ )
+		if (gracze[g]->bankrut() )
+			wynik++;
+	return wynik;
+}
+
 bool MojaGrubaRyba::czy_wygrana() {
+	int ile_bankructw = liczBankructwa();
 	return ile_bankructw == gracze.size() - 1;
 }
 
 void MojaGrubaRyba::play(unsigned int rounds) {
 
 	init_play();
-
+	// WAZNE! aktualizacja ilosci graczy w planszy
+	plansza.aktualizujGraczy(gracze.size());
 	/*
 	   TUTAJ IMO:
 	   iterujemy po rundach
@@ -477,56 +531,73 @@ void MojaGrubaRyba::play(unsigned int rounds) {
 				rzucamy koscmi, wywolujemy plansza.ruszGracza(Gracz , wyrzucone_oczka)
 				ta funkcja zajmuje sie juz wszystkim!
 		*/
-	// iterujemy po rundach
-	for ( auto r = 1; r <= rounds && !czy_wygrana(); r++ ) {
+	// czy_wgrana() - zmienilem tak zeby za kazdym razem
+	// przechodzila po graczach i zliczala ilu z nich to bankruci :((
+	// inaczej duuuzo do zmieniania by bylo w reszcie, dzieki temu dziala
+	for ( auto r = 1; r <= rounds && !czy_wygrana(); r++ )
 		printf("Runda: %d\n", r);
-		// iterujemy po kolejnych graczach w rundzie
 		for ( size_t g = 0; g < gracze.size(); g++ ) {
-			Gracz* gracz = &gracze[g];
-
-			// sprawdza czy gracz moze sie ruszyc w tej rundzie,
-			// wypisuje stosowny komunikat, gdy nie moze
-			if ( !status( gracz ) ) {
-				continue;
-			}
-
-			// jesli mozna wylonic zwyciezce, to takowy nie wykonuje
-			// juz ruchu
-			if ( !czy_wygrana() ) {
-				auto rzut = die.roll() + die.roll();
-				auto poz = gracz.pozycja();
-				// zmienna boolowa mowi, czy udalo sie przejsc / stanac na polu
-				// false oznacza bankructwo w wyniku przejscia / staniecia
-				bool ruch = true;
-				// mijamy (rzut - 1) pol
-				for ( int i = 1; i < rzut && ruch; i++ ) {
-					ruch = plansza[( poz + i ) % plansza.size()].
-									przejdz( gracz );
-				}
-
-				// Jesli doszedl pomyslnie do celu.
-				// Wazne, bo np mogl zbankrutowac na polu Depozyt.
-				if ( ruch ) {
-					poz = ( poz + rzut ) % plansza.size();
-					gracz.pozycja() = poz;
-					// pole moze zmienic wyzej domyslnie ustawiona pozycje gracza
-					// takim polem mogloby byc w przyszlosci np "Idź do akwarium"
-					ruch = plansza[poz].stan( gracz );
-				}
-
-				if ( !ruch ) {
-					// zbankrutowal przez ktorys z ruchow w tej turze
-					gracz->czyBankrut = true;
-					ile_bankructw++;
-				}
-			}
-
-			// sprawdza status po wykonaniu ruchu
-			if ( status( gracz ) ) {
-				printf( "%s pole: %s gotowka: %d\n", gracz->getNazwa(),
-						plansza[gracz->getPozycja()].getNazwa(),
-						gracz->gotowka() );
-			}
+			plansza.ruszGracza(gracze[g] , die.roll() + die.roll());
+			// aktualizujemy bankructwa
+			// gdy gra sie skonczy to zaden z pozostalych graczy w danej
+			// rundzie nie wykona ruchu ( wyswietli sie tylko ich status)
+			// ( plansza sama u siebie sprawdza czyWygrana() )
+			plansza.aktualizujBankructwa( liczBankructwa() );
 		}
-	}
+	// TO POWINNO WYSTARCZYC
 }
+
+
+//	// iterujemy po rundach
+//	for ( auto r = 1; r <= rounds && !czy_wygrana(); r++ ) {
+//		printf("Runda: %d\n", r);
+//		// iterujemy po kolejnych graczach w rundzie
+//		for ( size_t g = 0; g < gracze.size(); g++ ) {
+//			Gracz* gracz = &gracze[g];
+//
+//			// sprawdza czy gracz moze sie ruszyc w tej rundzie,
+//			// wypisuje stosowny komunikat, gdy nie moze
+//			if ( !status( gracz ) ) {
+//				continue;
+//			}
+//
+//			// jesli mozna wylonic zwyciezce, to takowy nie wykonuje
+//			// juz ruchu
+//			if ( !czy_wygrana() ) {
+//				auto rzut = die.roll() + die.roll();
+//				auto poz = gracz.pozycja();
+//				// zmienna boolowa mowi, czy udalo sie przejsc / stanac na polu
+//				// false oznacza bankructwo w wyniku przejscia / staniecia
+//				bool ruch = true;
+//				// mijamy (rzut - 1) pol
+//				for ( int i = 1; i < rzut && ruch; i++ ) {
+//					ruch = plansza[( poz + i ) % plansza.size()].
+//									przejdz( gracz );
+//				}
+//
+//				// Jesli doszedl pomyslnie do celu.
+//				// Wazne, bo np mogl zbankrutowac na polu Depozyt.
+//				if ( ruch ) {
+//					poz = ( poz + rzut ) % plansza.size();
+//					gracz.pozycja() = poz;
+//					// pole moze zmienic wyzej domyslnie ustawiona pozycje gracza
+//					// takim polem mogloby byc w przyszlosci np "Idź do akwarium"
+//					ruch = plansza[poz].stan( gracz );
+//				}
+//
+//				if ( !ruch ) {
+//					// zbankrutowal przez ktorys z ruchow w tej turze
+//					gracz->czyBankrut = true;
+//					ile_bankructw++;
+//				}
+//			}
+//
+//			// sprawdza status po wykonaniu ruchu
+//			if ( status( gracz ) ) {
+//				printf( "%s pole: %s gotowka: %d\n", gracz->getNazwa(),
+//						plansza[gracz->getPozycja()].getNazwa(),
+//						gracz->gotowka() );
+//			}
+//		}
+//	}
+//}

@@ -36,16 +36,22 @@ public:
 
 private:
 	std::shared_ptr<Die> die = nullptr;
-	std::vector<Gracz> gracze;
-	std::vector<Pole> plansza;
+	// Zmienione - Pablo
+	//std::vector<Gracz> gracze;
+	std::vector<std::shared_ptr<Gracz> > gracze;
+	//std::vector<Pole> plansza;
+	Plansza plansza;
 	int ile_bankructw;
 
+	int liczBankructwa();
 	void init_play();
 	bool czy_wygrana();
+
+	/*  To do planszy wrzuce! */
 	// Sprawdza status gracza w kontekscie nadchodzacego / zakonczonego ruchu.
 	// Zwraca: true - moze sie ruszyc, false - czeka / zbankrutowal.
 	// Wypisuje stosowne komunikaty.
-	bool status( Gracz* gracz );
+	//bool status( Gracz* gracz );
 };
 
 #endif
