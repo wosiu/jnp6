@@ -1,18 +1,14 @@
+/*
+* JNP 6
+* Pawel Krawczyk 334683
+* Michal Wos 336071
+*/
+
 #include "mojagrubaryba.h"
 #include <string>
 #include <map>
 
-// TODO:
-// add no except gdzie trza (i moze consty?)
-
-#include <iostream>
 using namespace std;
-#define debon 1
-#define deb(burak) if (debon) {cout<<"DEB-> "<<#burak<<": "<<burak<<endl;}
-#define debv(burak) if (debon) {cout<<"DEB-> "<<#burak<<": \t"; for (unsigned int zyx=0;zyx<burak.size();zyx++) cout<<burak[zyx]<<" "; cout<<endl;}
-#define debt(burak,SIzE) if (debon) {cout<<"DEB-> "<<#burak<<": \t"; for (unsigned int zyx=0;zyx<SIzE;zyx++) cout<<burak[zyx]<<" "; cout<<endl;}
-#define debend if (debon) {cout<<"_____________________"<<endl;}
-
 
 const unsigned int POCZATKOWA_KASA = 1000;
 const float KARA_ZA_SPRZEDAZ = 0.5;
@@ -25,16 +21,16 @@ const unsigned int MAX_GRACZY = 8;
 class Strategia {
 public:
 	// domyslnie zwracaja false
-	virtual bool wantSell(std::string nieruchomosc) { return false; }
+	virtual bool wantSell(string nieruchomosc) { return false; }
 	// funkcje wywolujemy WTW gracz g ma odpowiednia ilosc gotowki do kupna!
-	virtual bool wantBuy(std::string nieruchomosc) { return false; }
+	virtual bool wantBuy(string nieruchomosc) { return false; }
 	virtual void resetuj() {};
 };
 
 
 class Smartass : public Strategia {
 public:
-	bool wantBuy(std::string nieruchomosc) { return true; }
+	bool wantBuy(string nieruchomosc) { return true; }
 };
 
 
@@ -42,7 +38,7 @@ class Dumb : public Strategia {
 public:
 	Dumb() { resetuj(); }
 	void resetuj() { licznik = 0; }
-	bool wantBuy(std::string nieruchomosc ) {
+	bool wantBuy(string nieruchomosc ) {
 		return ((++licznik) %= MODULO) == 0;
 	}
 
@@ -54,19 +50,19 @@ private:
 
 class Czlowiecza : public Strategia {
 public:
-	Czlowiecza(std::shared_ptr<Human> _czlowiek) : czlowiek(_czlowiek) {}
+	Czlowiecza(shared_ptr<Human> _czlowiek) : czlowiek(_czlowiek) {}
 
-	bool wantSell(std::string nieruchomosc) {
+	bool wantSell(string nieruchomosc) {
 		bool answer = czlowiek->wantSell(nieruchomosc);
 		return answer;
 	}
-	bool wantBuy(std::string nieruchomosc) {
+	bool wantBuy(string nieruchomosc) {
 		bool answer = czlowiek->wantBuy(nieruchomosc);
 		return answer;
 	}
 
 private:
-	std::shared_ptr<Human> czlowiek;
+	shared_ptr<Human> czlowiek;
 };
 
 
@@ -77,10 +73,10 @@ class Nieruchomosc;
 
 class Gracz {
 private:
-	std::string nazwa;
+	string nazwa;
 	shared_ptr<Strategia> strategia;
 	int licznik_nier = 0;
-	std::map<int, Nieruchomosc*> posiadlosci;
+	map<int, Nieruchomosc*> posiadlosci;
 	unsigned int _gotowka;
 	unsigned int _ile_postoju;
 	unsigned int _pozycja; // pozycja na planszy
@@ -90,17 +86,19 @@ private:
 	void wantSell();
 
 public:
-	Gracz(const std::string& nazwa, shared_ptr<Strategia> strategia) :
+	Gracz(const string& nazwa, shared_ptr<Strategia> strategia) :
 	   		nazwa(nazwa), strategia(strategia) {
 		resetuj();
 	}
 
 	void resetuj() {
-		_pozycja = 0;
+		strategia->resetuj();
+		licznik_nier = 0;
+		posiadlosci.clear();
 		_gotowka = POCZATKOWA_KASA;
+		_pozycja = 0;
 		_ile_postoju = 0;
 		_bankrut = false;
-		strategia->resetuj();
 	}
 	// zwraca hajs jaki udalo sie zaplacic. Gdy brak hajsu -> sprawdza czy gracz
 	// chce sprzedac posiadlosci. Gdy po sprzedaniu nadal brak kasy ->
@@ -112,7 +110,7 @@ public:
 	unsigned int& postoj() { return _ile_postoju; }
 	unsigned int& pozycja() { return _pozycja; }
 	bool bankrut() const { return _bankrut; }
-	std::string getNazwa() const { return nazwa; }
+	const string& getNazwa() const { return nazwa; }
 };
 
 
@@ -120,17 +118,16 @@ public:
 
 class Pole {
 public:
-	Pole(std::string nazwa) : nazwa(nazwa) {}
+	Pole(string nazwa) : nazwa(nazwa) {}
 
 	// gdy gracz przechodzi przez pole
-	virtual void przejdz(std::shared_ptr<Gracz> g) {}
+	virtual void przejdz(shared_ptr<Gracz> g) {}
 	// gdy gracz zatrzymuje sie na polu
-	virtual void zostan(std::shared_ptr<Gracz> g) {}
+	virtual void zostan(shared_ptr<Gracz> g) {}
 
-	std::string getNazwa() { return nazwa; }
-
-protected:
-	std::string nazwa;
+	string getNazwa() { return nazwa; }
+private:
+	string nazwa;
 };
 
 
@@ -138,9 +135,9 @@ class Start : public Pole {
 private:
 	static const unsigned int nagroda = 50;
 public:
-	Start(std::string nazwa ) : Pole(nazwa) {}
-	virtual void zostan(std::shared_ptr<Gracz> g) { g->dodajGotowke(nagroda); }
-	void przejdz(std::shared_ptr<Gracz> g) { this->zostan(g); }
+	Start(string nazwa ) : Pole(nazwa) {}
+	virtual void zostan(shared_ptr<Gracz> g) { g->dodajGotowke(nagroda); }
+	void przejdz(shared_ptr<Gracz> g) { this->zostan(g); }
 };
 
 
@@ -148,10 +145,10 @@ class Akwarium : public Pole {
 private:
 	unsigned int ile_tur;
 public:
-	Akwarium(unsigned int ile_tur, std::string nazwa) : Pole(nazwa),
+	Akwarium(unsigned int ile_tur, string nazwa) : Pole(nazwa),
 			ile_tur(ile_tur) {}
 
-	void zostan(std::shared_ptr<Gracz> g) { g->postoj() = ile_tur; }
+	void zostan(shared_ptr<Gracz> g) { g->postoj() = ile_tur; }
 };
 
 
@@ -160,15 +157,15 @@ private:
 	unsigned int gotowka = 0;
 	unsigned int stawka;
 public:
-	Depozyt(unsigned int stawka, std::string nazwa) : Pole(nazwa),
+	Depozyt(unsigned int stawka, string nazwa) : Pole(nazwa),
 			stawka(stawka) {}
 
-	void zostan(std::shared_ptr<Gracz> g) {
+	void zostan(shared_ptr<Gracz> g) {
 		g->dodajGotowke(gotowka);
 		gotowka = 0;
 	}
 
-	void przejdz(std::shared_ptr<Gracz> g) {
+	void przejdz(shared_ptr<Gracz> g) {
 		gotowka += g->plac(stawka);
 	}
 };
@@ -178,8 +175,8 @@ class Kara : public Pole {
 private:
 	unsigned int kara;
 public:
-	Kara(unsigned int kara, std::string nazwa) : Pole(nazwa), kara(kara) {}
-	void zostan(std::shared_ptr<Gracz> g) { g->plac(kara); }
+	Kara(unsigned int kara, string nazwa) : Pole(nazwa), kara(kara) {}
+	void zostan(shared_ptr<Gracz> g) { g->plac(kara); }
 };
 
 
@@ -187,23 +184,23 @@ class Nagroda : public Pole {
 private:
 	unsigned int nagroda;
 public:
-	Nagroda(unsigned int nagroda, std::string nazwa) : Pole(nazwa),
+	Nagroda(unsigned int nagroda, string nazwa) : Pole(nazwa),
 			nagroda(nagroda) {}
 
-	void zostan(std::shared_ptr<Gracz> g) { g->dodajGotowke(nagroda); }
+	void zostan(shared_ptr<Gracz> g) { g->dodajGotowke(nagroda); }
 };
 
 // ---------------------- nieruchomosci ----------------------------------------
 
 class Nieruchomosc : public Pole {
 public:
-	Nieruchomosc(unsigned int cena, unsigned int stawka, std::string nazwa)
+	Nieruchomosc(unsigned int cena, unsigned int stawka, string nazwa)
 		: Pole(nazwa), cena(cena), stawka(stawka) {}
 
-	std::shared_ptr<Gracz> wlasciciel = nullptr;
+	shared_ptr<Gracz> wlasciciel = nullptr;
 
-	virtual void przejdz(std::shared_ptr<Gracz> g) {}
-	virtual void zostan(std::shared_ptr<Gracz> g);
+	virtual void przejdz(shared_ptr<Gracz> g) {}
+	virtual void zostan(shared_ptr<Gracz> g);
 	unsigned int getCena() const { return cena; }
 	unsigned int getStawka() const { return stawka; }
 
@@ -215,14 +212,14 @@ private:
 
 class ObiektUzytPublicznej : public Nieruchomosc {
 public:
-	ObiektUzytPublicznej(unsigned int cena, std::string nazwa) :
+	ObiektUzytPublicznej(unsigned int cena, string nazwa) :
 			Nieruchomosc(cena, cena * 0.4, nazwa) {}
 };
 
 
 class Koralowiec : public Nieruchomosc {
 public:
-	Koralowiec(unsigned int cena, std::string nazwa) :
+	Koralowiec(unsigned int cena, string nazwa) :
 			Nieruchomosc(cena, cena * 0.2, nazwa) {}
 };
 
@@ -231,12 +228,12 @@ public:
 
 class Plansza {
 private:
-	std::vector<shared_ptr<Pole> > pola;
+	vector<shared_ptr<Pole> > pola;
 
 public:
 	Plansza() { resetuj(); }
 
-	unsigned int size() { return pola.size(); }
+	unsigned int size() const { return pola.size(); }
 	Pole& pole(unsigned int poz) { return *pola[poz]; }
 
 	void resetuj() {
@@ -260,7 +257,7 @@ public:
 
 // ============================ IMPLEMENTACJE ==================================
 
-void Nieruchomosc::zostan(std::shared_ptr<Gracz> g) {
+void Nieruchomosc::zostan(shared_ptr<Gracz> g) {
 	// czy na polu stanal wlasciciel pola
 	if (wlasciciel == g) { return; }
 	// czy nieruchomosc na sprzedaz
@@ -335,7 +332,7 @@ void Gracz::wantSell() {
 }
 
 MojaGrubaRyba::MojaGrubaRyba() {
-	plansza = std::make_shared<Plansza>();
+	plansza = make_shared<Plansza>();
 }
 
 
@@ -345,34 +342,34 @@ void MojaGrubaRyba::addComputerPlayer(ComputerLevel level) {
 		throw TooManyPlayersException(MAX_GRACZY);
 	}
 
-	std::string nazwa = "Gracz" + std::to_string(gracze.size() + 1);
+	string nazwa = "Gracz" + to_string(gracze.size() + 1);
 
 	switch (level) {
 		case ComputerLevel::DUMB:
 			//TO DO sprawdzic czy pobiernaie referencji z tak stworzonego
 			// obiekty strategii sie nie wysypuje
-			gracze.push_back(std::make_shared<Gracz>(nazwa,
+			gracze.push_back(make_shared<Gracz>(nazwa,
 					   	make_shared<Dumb>()));
 			break;
 		case ComputerLevel::SMARTASS:
-			gracze.push_back(std::make_shared<Gracz>(nazwa,
+			gracze.push_back(make_shared<Gracz>(nazwa,
 					   	make_shared<Smartass>()));
 			break;
 	}
 }
 
 
-void MojaGrubaRyba::addHumanPlayer(std::shared_ptr<Human> human) {
+void MojaGrubaRyba::addHumanPlayer(shared_ptr<Human> human) {
 	if (gracze.size() == MAX_GRACZY) {
 		throw TooManyPlayersException(MAX_GRACZY);
 	}
 	gracze.push_back(
-				std::make_shared<Gracz>(human->getName(),
+				make_shared<Gracz>(human->getName(),
 				   	make_shared<Czlowiecza>(human)));
 }
 
 
-bool MojaGrubaRyba::status(std::shared_ptr<Gracz> gracz) {
+bool MojaGrubaRyba::status(shared_ptr<Gracz> gracz) {
 	if (gracz->bankrut()) {
 		printf("%s *** bankrut ***\n", gracz->getNazwa().c_str());
 		return false;
@@ -422,7 +419,7 @@ void MojaGrubaRyba::play(unsigned int rounds) {
 		printf("Runda: %d\n", r);
 		// iterujemy po kolejnych graczach w rundzie
 		for (size_t g = 0; g < gracze.size(); g++) {
-			std::shared_ptr<Gracz> gracz = gracze[g];
+			shared_ptr<Gracz> gracz = gracze[g];
 
 			// sprawdza czy gracz moze sie ruszyc w tej rundzie,
 			if (gracz->bankrut()) {
@@ -475,4 +472,3 @@ void MojaGrubaRyba::play(unsigned int rounds) {
 		}
 	}
 }
-/**/
