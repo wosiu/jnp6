@@ -4,6 +4,9 @@
 // TODO:
 // add no except gdzie trza (i moze consty?)
 
+#include <iostream>
+using namespace std;
+
 const unsigned int POCZATKOWA_KASA = 1000;
 const float KARA_ZA_SPRZEDAZ = 0.5;
 const unsigned int MIN_GRACZY = 2;
@@ -23,7 +26,7 @@ public:
 		return false;
 	}
 
-	virtual void reset() {};
+	virtual void resetuj() {};
 };
 
 
@@ -36,10 +39,10 @@ public:
 class Dumb : public Strategia {
 public:
 	Dumb() {
-		reset();
+		resetuj();
 	}
 
-	void reset() {
+	void resetuj() {
 		licznik = 0;
 	}
 
@@ -92,14 +95,14 @@ private:
 public:
 	Gracz(const std::string& nazwa, Strategia strategia) : nazwa(nazwa),
 			strategia(strategia) {
-		reset();
+		resetuj();
 	}
 
-	void reset() {
+	void resetuj() {
 		_gotowka = POCZATKOWA_KASA;
 		_ile_postoju = 0;
 		_bankrut = false;
-		strategia.reset();
+		strategia.resetuj();
 	}
 	// zwraca hajs jaki udalo sie zaplacic. Gdy brak hajsu -> sprawdza czy gracz
 	// chce sprzedac posiadlosci. Gdy po sprzedaniu nadal brak kasy ->
@@ -236,12 +239,12 @@ private:
 	std::vector<Pole> pola;
 
 public:
-	Plansza() { reset(); }
+	Plansza() { resetuj(); }
 
 	unsigned int size() { return pola.size(); }
 	Pole& pole(unsigned int poz) { return pola[poz]; }
 
-	void reset() {
+	void resetuj() {
 		pola.clear();
 		pola.push_back(Start("Start"));
 		pola.push_back(Koralowiec(160, "Anemonia"));
@@ -391,7 +394,7 @@ bool MojaGrubaRyba::status( std::shared_ptr<Gracz> gracz ) {
 
 
 void MojaGrubaRyba::init_play() {
-	if ( die = nullptr ) {
+	if ( die == nullptr ) {
 		throw NoDieException();
 	}
 	if ( gracze.size() < MIN_GRACZY ) {
@@ -400,9 +403,9 @@ void MojaGrubaRyba::init_play() {
 	// resetujemy stany z poprzedniej rozgrywki
 	ile_bankructw = 0;
 	for ( size_t i = 0; i < gracze.size(); i++ ) {
-		gracze[i].reset();
+		gracze[i]->resetuj();
 	}
-	plansza->reset();
+	plansza->resetuj();
 }
 
 
