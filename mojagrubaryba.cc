@@ -9,16 +9,21 @@ const float KARA_ZA_SPRZEDAZ = 0.5;
 const unsigned int MIN_GRACZY = 2;
 const unsigned int MAX_GRACZY = 8;
 
+
+
 // ========================= STRATEGIE GRACZA ==================================
+
+// graczowi starcza forward declaration bo ma tylko wskazniki na nieruchomosci
+class Nieruchomosc;
 
 class Strategia {
 public:
 	// domyslnie zwracaja false
-	virtual bool wantSell(Nieruchomosc* n, Gracz* g = nullptr) {
+	virtual bool wantSell(Nieruchomosc* n, std::shared_ptr<Gracz> g = nullptr) {
 		return false;
 	}
 	// funkcje wywolujemy WTW gracz g ma odpowiednia ilosc gotowki do kupna!
-	virtual bool wantBuy(Nieruchomosc* n, Gracz* g = NULL) {
+	virtual bool wantBuy(Nieruchomosc* n, std::shared_ptr<Gracz> g = nullptr) {
 		return false;
 	}
 
@@ -27,7 +32,7 @@ public:
 
 class Smartass : public Strategia {
 public:
-	bool wantBuy(Nieruchomosc* n, Gracz* g = NULL ) { return true; }
+	bool wantBuy(Nieruchomosc* n, std::shared_ptr<Gracz> g = nullptr ) { return true; }
 };
 
 class Dumb : public Strategia {
@@ -40,7 +45,7 @@ public:
 		licznik = 0;
 	}
 
-	bool wantBuy(Nieruchomosc* n , Gracz* g = NULL ) {
+	bool wantBuy(Nieruchomosc* n , std::shared_ptr<Gracz> g = nullptr ) {
 		return ( ( ++licznik ) %= MODULO ) == 1;
 	}
 
@@ -54,11 +59,11 @@ class Czlowiecza : public Strategia {
 public:
 	Czlowiecza(std::shared_ptr<Human> _czlowiek) : czlowiek(_czlowiek) {}
 
-	bool wantSell(Nieruchomosc* n , Gracz* g = NULL) {
+	bool wantSell(Nieruchomosc* n , std::shared_ptr<Gracz> g = nullptr) {
 		bool answer = czlowiek->wantSell( n->getNazwa() );
 		return answer;
 	}
-	bool wantBuy(Nieruchomosc* n , Gracz* g = NULL) {
+	bool wantBuy(Nieruchomosc* n , std::shared_ptr<Gracz> g = nullptr) {
 		bool answer = czlowiek->wantBuy( n->getNazwa() );
 		return answer;
 	}
@@ -155,7 +160,7 @@ void Gracz::wantSell() {
 		auto n = posiadlosci[i];
 		if ( strategia.wantSell(n, this) ) {
 			_gotowka += n->getCena() * KARA_ZA_SPRZEDAZ;
-			n->wlasciciel = NULL;
+			n->wlasciciel = nullptr;
 			// usuwamy nieruchomosc z posiadlosci gracza O(1)
 			posiadlosci[i] = posiadlosci.back();
 			posiadlosci.pop_back();
@@ -163,6 +168,9 @@ void Gracz::wantSell() {
 	}
 }
 
+// TODO
+// Pole tez uzywa tylko wskaznikow na gracza, ale juz ma pelna definicje,
+// wiec nie powinno srac
 
 // ============================= POLE ==========================================
 
@@ -171,9 +179,9 @@ public:
 	Pole( std::string nazwa ) : nazwa(nazwa) {}
 
 	// gdy gracz przechodzi przez pole
-	virtual void przejdz(Gracz* g) {}
+	virtual void przejdz(std::shared_ptr<Gracz> g) {}
 	// gdy gracz zatrzymuje sie na polu
-	virtual void zostan(Gracz* g) {}
+	virtual void zostan(std::shared_ptr<Gracz> g) {}
 
 	std::string getNazwa() { return nazwa; }
 
@@ -187,8 +195,8 @@ private:
 	static const unsigned int nagroda = 50;
 public:
 	Start( std::string nazwa  ) : Pole( nazwa ) {}
-	void zostan(Gracz* g) { g->dodajGotowke(nagroda); }
-	void przejdz(Gracz* g) { this->zostan(g); }
+	void zostan(std::shared_ptr<Gracz> g) { g->dodajGotowke(nagroda); }
+	void przejdz(std::shared_ptr<Gracz> g) { this->zostan(g); }
 };
 
 
@@ -199,7 +207,7 @@ public:
 	Akwarium( unsigned int ile_tur, std::string nazwa ) : Pole(nazwa),
 			ile_tur(ile_tur) {}
 
-	void zostan(Gracz* g) { g->postoj() = ile_tur; }
+	void zostan(std::shared_ptr<Gracz> g) { g->postoj() = ile_tur; }
 };
 
 class Depozyt : public Pole {
@@ -210,12 +218,12 @@ public:
 	Depozyt(unsigned int stawka, std::string nazwa) : Pole(nazwa),
 			stawka(stawka) {}
 
-	void zostan(Gracz* g) {
+	void zostan(std::shared_ptr<Gracz> g) {
 		g->dodajGotowke(gotowka);
 		gotowka = 0;
 	}
 
-	void przejdz(Gracz* g) {
+	void przejdz(std::shared_ptr<Gracz> g) {
 		gotowka += g->plac(stawka);
 	}
 };
@@ -225,7 +233,7 @@ private:
 	unsigned int kara;
 public:
 	Kara(unsigned int kara, std::string nazwa) : Pole(nazwa), kara(kara) {}
-	void zostan(Gracz* g) { g->plac(kara); }
+	void zostan(std::shared_ptr<Gracz> g) { g->plac(kara); }
 };
 
 class Nagroda : public Pole {
@@ -235,7 +243,7 @@ public:
 	Nagroda(unsigned int nagroda, std::string nazwa) : Pole(nazwa),
 			nagroda(nagroda) {}
 
-	void zostan(Gracz* g) { g->dodajGotowke(nagroda); }
+	void zostan(std::shared_ptr<Gracz> g) { g->dodajGotowke(nagroda); }
 };
 
 // ---------------------- Interfejs nieruchomosci ------------------------------
@@ -245,17 +253,17 @@ public:
 	Nieruchomosc( unsigned int cena, unsigned int stawka, std::string nazwa )
 		: Pole(nazwa), cena(cena), stawka(stawka) {}
 
-	Gracz* wlasciciel = NULL;
+	std::shared_ptr<Gracz> wlasciciel = nullptr;
 
-	virtual void przejdz(Gracz* g) {}
+	virtual void przejdz(std::shared_ptr<Gracz> g) {}
 
-	virtual void zostan(Gracz* g) {
+	virtual void zostan(std::shared_ptr<Gracz> g) {
 		// czy na polu stanal wlasciciel pola
 		if ( wlasciciel == g ) {
 			return;
 		}
 		// czy nieruchomosc na sprzedaz
-		if ( wlasciciel == NULL ) {
+		if ( wlasciciel == nullptr ) {
 			// oferujemy graczowi zakupienie nieruchomosci
 			if ( g->wantBuy( this ) ) {
 				// chce i moze kupic
@@ -267,7 +275,7 @@ public:
 	}
 
 	unsigned int getCena() const { return cena; }
-
+// TODO private i geter to stawki
 protected:
 	unsigned int cena;
 	unsigned int stawka;
@@ -297,13 +305,10 @@ private:
 	std::vector<Pole> pola;
 
 public:
-	Plansza() {
-		reset();
-	}
+	Plansza() { reset(); }
 
-	Pole& pole(unsigned int poz) {
-		return pola[poz];
-	}
+	unsigned int size() { return pola.size(); }
+	Pole& pole(unsigned int poz) { return pola[poz]; }
 
 	void reset() {
 		pola.clear();
@@ -340,10 +345,10 @@ void MojaGrubaRyba::addComputerPlayer(ComputerLevel level) {
 		case ComputerLevel::DUMB:
 			//TO DO sprawdzic czy pobiernaie referencji z tak stworzonego
 			// obiekty strategii sie nie wysypuje
-			gracze.push_back( Gracz(nazwa, Dumb()) );
+			gracze.push_back( std::make_shared<Gracz>(nazwa, Dumb()) );
 			break;
 		case ComputerLevel::SMARTASS:
-			gracze.push_back( Gracz(nazwa, Smartass()) );
+			gracze.push_back( std::make_shared<Gracz>(nazwa, Smartass()) );
 			break;
 	}
 }
@@ -352,18 +357,19 @@ void MojaGrubaRyba::addHumanPlayer(std::shared_ptr<Human> human) {
 	if ( gracze.size() == MAX_GRACZY ) {
 		throw TooManyPlayersException( MAX_GRACZY );
 	}
-	gracze.push_back( Gracz(human->getName(), Czlowiecza(human)) );
+	gracze.push_back(
+				std::make_shared<Gracz>(human->getName(), Czlowiecza(human)) );
 }
 
-bool MojaGrubaRyba::status( Gracz* gracz ) {
+bool MojaGrubaRyba::status( std::shared_ptr<Gracz> gracz ) {
 	if ( gracz->bankrut() ) {
 		printf("%s *** bankrut ***\n", gracz->getNazwa().c_str() );
 		return false;
 	}
 
 	if ( gracz->postoj() > 0 ) {
-		printf( "%s pole: %s *** czekanie: %d ***\n", gracz->getNazwa(),
-			plansza[gracz->pozycja()].getNazwa(),
+		printf( "%s pole: %s *** czekanie: %d ***\n", gracz->getNazwa().c_str(),
+			plansza->pole( gracz->pozycja() ).getNazwa().c_str(),
 			gracz->postoj() );
 		gracz->postoj()--;
 		return false;
@@ -384,7 +390,7 @@ void MojaGrubaRyba::init_play() {
 	for ( size_t i = 0; i < gracze.size(); i++ ) {
 		gracze[i].reset();
 	}
-	plansza.reset();
+	plansza->reset();
 }
 
 
@@ -401,7 +407,7 @@ void MojaGrubaRyba::play(unsigned int rounds) {
 		printf("Runda: %d\n", r);
 		// iterujemy po kolejnych graczach w rundzie
 		for ( size_t g = 0; g < gracze.size(); g++ ) {
-			Gracz* gracz = &gracze[g];
+			std::shared_ptr<Gracz> gracz = gracze[g];
 
 			// sprawdza czy gracz moze sie ruszyc w tej rundzie,
 			// wypisuje stosowny komunikat, gdy nie moze
@@ -417,19 +423,19 @@ void MojaGrubaRyba::play(unsigned int rounds) {
 
 				// iterujemy po (rzut mniej 1) polach - idziemy do celu
 				for ( int i = 1; i < rzut && !gracz->bankrut(); i++ ) {
-					(++poz) %= plansza.size();
-					plansza.pole(poz).przejdz( gracz );
+					(++poz) %= plansza->size();
+					plansza->pole(poz).przejdz( gracz );
 				}
 
 				// Doszedl pomyslnie do celu lub zbankrutowal po drodze
 				// (np na polu Depozyt)
 				if ( !gracz->bankrut() ) {
-					(++poz) %= plansza.size();
+					(++poz) %= plansza->size();
 					gracz->pozycja() = poz;
 					// pole moze zmienic wyzej domyslnie ustawiona pozycje gracza
 					// takim polem mogloby byc w przyszlosci np "Idź do akwarium"
 					// Ponizej gracz takze moze stac sie bankrutem
-					plansza.pole(poz).zostan( gracz );
+					plansza->pole(poz).zostan( gracz );
 				}
 
 				if ( gracz->bankrut() ) {
@@ -439,10 +445,11 @@ void MojaGrubaRyba::play(unsigned int rounds) {
 
 			// sprawdza status po wykonaniu ruchu
 			if ( status( gracz ) ) {
-				printf( "%s pole: %s gotowka: %d\n", gracz->getNazwa(),
-						plansza.pole( gracz->pozycja() ).getNazwa(),
+				printf( "%s pole: %s gotowka: %d\n", gracz->getNazwa().c_str(),
+						plansza->pole( gracz->pozycja() ).getNazwa().c_str(),
 						gracz->gotowka() );
 			}
 		}
 	}
 }
+/**/

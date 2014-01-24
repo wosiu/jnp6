@@ -5,15 +5,17 @@
 #include <vector>
 #include "grubaryba.h"
 
+
 // forward declarations:
 class Gracz;
-class Nieruchomosc;
 class Plansza;
 
 // MojaGrubaRyba traktujemy jako 'zarzadce' gry
 class MojaGrubaRyba : public GrubaRyba {
 public:
-	MojaGrubaRyba() {}
+	MojaGrubaRyba() {
+		//plansza = std::make_shared<Plansza>();
+	}
 
     // Przekazuje prototypową kostkę do gry.
     // Jeżeli argumentem jest pusty wskaźnik, to nie wykonuje żadnej operacji (ale nie ma błędu).
@@ -42,8 +44,8 @@ public:
 
 private:
 	std::shared_ptr<Die> die = nullptr;
-	std::vector<Gracz> gracze;
-	Plansza plansza;
+	std::vector<std::shared_ptr<Gracz> > gracze;
+	std::shared_ptr<Plansza> plansza = nullptr;
 	unsigned int ile_bankructw;
 
 	void init_play();
@@ -51,7 +53,8 @@ private:
 	// Sprawdza status gracza w kontekscie nadchodzacego / zakonczonego ruchu.
 	// Zwraca: true - moze sie ruszyc, false - czeka / zbankrutowal.
 	// Wypisuje stosowne komunikaty.
-	bool status( Gracz* gracz );
+	bool status( std::shared_ptr<Gracz> gracz );
 };
+
 
 #endif
