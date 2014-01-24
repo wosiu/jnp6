@@ -24,14 +24,9 @@ const unsigned int MAX_GRACZY = 8;
 class Strategia {
 public:
 	// domyslnie zwracaja false
-	virtual bool wantSell(std::string nieruchomosc) {
-		return false;
-	}
+	virtual bool wantSell(std::string nieruchomosc) { return false; }
 	// funkcje wywolujemy WTW gracz g ma odpowiednia ilosc gotowki do kupna!
-	virtual bool wantBuy(std::string nieruchomosc) {
-		return false;
-	}
-
+	virtual bool wantBuy(std::string nieruchomosc) { return false; }
 	virtual void resetuj() {};
 };
 
@@ -44,14 +39,8 @@ public:
 
 class Dumb : public Strategia {
 public:
-	Dumb() {
-		resetuj();
-	}
-
-	void resetuj() {
-		licznik = 0;
-	}
-
+	Dumb() { resetuj(); }
+	void resetuj() { licznik = 0; }
 	bool wantBuy(std::string nieruchomosc  ) {
 		return ( ( ++licznik ) %= MODULO ) == 0;
 	}
@@ -99,8 +88,8 @@ private:
 	void wantSell();
 
 public:
-	Gracz(const std::string& nazwa, shared_ptr<Strategia> strategia) : nazwa(nazwa),
-			strategia(strategia) {
+	Gracz(const std::string& nazwa, shared_ptr<Strategia> strategia) :
+	   		nazwa(nazwa), strategia(strategia) {
 		resetuj();
 	}
 
@@ -270,9 +259,7 @@ public:
 
 void Nieruchomosc::zostan(std::shared_ptr<Gracz> g) {
 	// czy na polu stanal wlasciciel pola
-	if ( wlasciciel == g ) {
-		return;
-	}
+	if ( wlasciciel == g ) { return; }
 	// czy nieruchomosc na sprzedaz
 	if ( wlasciciel == nullptr ) {
 		// oferujemy graczowi zakupienie nieruchomosci
@@ -361,10 +348,12 @@ void MojaGrubaRyba::addComputerPlayer(ComputerLevel level) {
 		case ComputerLevel::DUMB:
 			//TO DO sprawdzic czy pobiernaie referencji z tak stworzonego
 			// obiekty strategii sie nie wysypuje
-			gracze.push_back( std::make_shared<Gracz>(nazwa, make_shared<Dumb>()) );
+			gracze.push_back( std::make_shared<Gracz>(nazwa,
+					   	make_shared<Dumb>()) );
 			break;
 		case ComputerLevel::SMARTASS:
-			gracze.push_back( std::make_shared<Gracz>(nazwa, make_shared<Smartass>()) );
+			gracze.push_back( std::make_shared<Gracz>(nazwa,
+					   	make_shared<Smartass>()) );
 			break;
 	}
 }
@@ -375,7 +364,8 @@ void MojaGrubaRyba::addHumanPlayer(std::shared_ptr<Human> human) {
 		throw TooManyPlayersException( MAX_GRACZY );
 	}
 	gracze.push_back(
-				std::make_shared<Gracz>(human->getName(), make_shared<Czlowiecza>(human)) );
+				std::make_shared<Gracz>(human->getName(),
+				   	make_shared<Czlowiecza>(human)) );
 }
 
 
@@ -464,8 +454,8 @@ void MojaGrubaRyba::play(unsigned int rounds) {
 				if ( !gracz->bankrut() ) {
 					(++poz) %= plansza->size();
 					gracz->pozycja() = poz;
-					// pole moze zmienic wyzej domyslnie ustawiona pozycje gracza
-					// takim polem mogloby byc w przyszlosci np "Idź do akwarium"
+					// pole moze zmienic wyzej ustawiona pozycje gracza, takim
+					// polem mogloby byc w przyszlosci np "Idź do akwarium"
 					// Ponizej gracz takze moze stac sie bankrutem
 					plansza->pole(poz).zostan( gracz );
 				}
