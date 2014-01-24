@@ -10,20 +10,16 @@ const unsigned int MIN_GRACZY = 2;
 const unsigned int MAX_GRACZY = 8;
 
 
-
 // ========================= STRATEGIE GRACZA ==================================
-
-// graczowi starcza forward declaration bo ma tylko wskazniki na nieruchomosci
-class Nieruchomosc;
 
 class Strategia {
 public:
 	// domyslnie zwracaja false
-	virtual bool wantSell(Nieruchomosc* n, std::shared_ptr<Gracz> g = nullptr) {
+	virtual bool wantSell(std::string nieruchomosc) {
 		return false;
 	}
 	// funkcje wywolujemy WTW gracz g ma odpowiednia ilosc gotowki do kupna!
-	virtual bool wantBuy(Nieruchomosc* n, std::shared_ptr<Gracz> g = nullptr) {
+	virtual bool wantBuy(std::string nieruchomosc) {
 		return false;
 	}
 
@@ -32,7 +28,7 @@ public:
 
 class Smartass : public Strategia {
 public:
-	bool wantBuy(Nieruchomosc* n, std::shared_ptr<Gracz> g = nullptr ) { return true; }
+	bool wantBuy(std::string nieruchomosc ) { return true; }
 };
 
 class Dumb : public Strategia {
@@ -45,7 +41,7 @@ public:
 		licznik = 0;
 	}
 
-	bool wantBuy(Nieruchomosc* n , std::shared_ptr<Gracz> g = nullptr ) {
+	bool wantBuy(std::string nieruchomosc  ) {
 		return ( ( ++licznik ) %= MODULO ) == 1;
 	}
 
@@ -59,12 +55,12 @@ class Czlowiecza : public Strategia {
 public:
 	Czlowiecza(std::shared_ptr<Human> _czlowiek) : czlowiek(_czlowiek) {}
 
-	bool wantSell(Nieruchomosc* n , std::shared_ptr<Gracz> g = nullptr) {
-		bool answer = czlowiek->wantSell( n->getNazwa() );
+	bool wantSell(std::string nieruchomosc) {
+		bool answer = czlowiek->wantSell( nieruchomosc );
 		return answer;
 	}
-	bool wantBuy(Nieruchomosc* n , std::shared_ptr<Gracz> g = nullptr) {
-		bool answer = czlowiek->wantBuy( n->getNazwa() );
+	bool wantBuy(std::string nieruchomosc) {
+		bool answer = czlowiek->wantBuy( nieruchomosc );
 		return answer;
 	}
 
@@ -72,17 +68,21 @@ private:
 	std::shared_ptr<Human> czlowiek;
 };
 
+
 // ================================ GRACZ ======================================
+
+// forward declaration:
+class Nieruchomosc;
 
 class Gracz {
 private:
 	std::string nazwa;
+	Strategia strategia;
+	std::vector<Nieruchomosc*> posiadlosci;
 	unsigned int _gotowka;
 	unsigned int _ile_postoju;
 	unsigned int _pozycja; // pozycja na planszy
 	bool _bankrut;
-	Strategia strategia;
-	std::vector<Nieruchomosc*> posiadlosci;
 	// sprawdza czy gracz chce sprzedac nieruchomosci. jesli tak, to
 	// dodaje kase i wywala sprzedane nieruchomosci z wektora
 	void wantSell();
@@ -111,66 +111,6 @@ public:
 	bool bankrut() const { return _bankrut; }
 	std::string getNazwa() const { return nazwa; }
 };
-
-unsigned int Gracz::plac(unsigned int cena) {
-	if ( _gotowka >= cena ) {
-		_gotowka -= cena;
-		return cena;
-	} else {
-		// brak kasy - sprzedaje nieruchomosci jesli chce
-		wantSell();
-
-		if ( _gotowka >= cena ) {
-			_gotowka -= cena;
-			return cena;
-		} else {
-			// bankrutuje
-			_bankrut = true;
-			return _gotowka;
-		}
-	}
-}
-
-// wantBuy wywolywane jest w nieruchomosciach w funkcji zostan(...);
-// zwraca true gdy gracz chce kupic nieruchomosc i stac go na to
-bool Gracz::wantBuy(Nieruchomosc* n) {
-	// sprawdzamy czy gracza na to stac
-	if ( _gotowka < n->getCena() ) {
-		// nie stac wiec gracz sprzedaje wybrane nieruchomosci
-		wantSell();
-	}
-	if ( _gotowka < n->getCena() ) {
-		// jesli potencjalne sprzedane nieruchomosci nadal nie wystarczaja na
-		// pokrycie to prawdopodobnie jest idiota, bo niepotrzebnie sprzedal
-		// nieruchomosci
-		return false;
-	}
-	// tutaj mamy pewnosc ze gracz ma odpowiednia ilosc gotowki do kupna n
-	if ( strategia.wantBuy( n, this ) ) {
-		_gotowka -= n->getCena();
-		posiadlosci.push_back( n );
-		return true;
-	}
-
-	return false;
-}
-
-void Gracz::wantSell() {
-	for ( size_t i = 0; i < posiadlosci.size(); i++ ) {
-		auto n = posiadlosci[i];
-		if ( strategia.wantSell(n, this) ) {
-			_gotowka += n->getCena() * KARA_ZA_SPRZEDAZ;
-			n->wlasciciel = nullptr;
-			// usuwamy nieruchomosc z posiadlosci gracza O(1)
-			posiadlosci[i] = posiadlosci.back();
-			posiadlosci.pop_back();
-		}
-	}
-}
-
-// TODO
-// Pole tez uzywa tylko wskaznikow na gracza, ale juz ma pelna definicje,
-// wiec nie powinno srac
 
 // ============================= POLE ==========================================
 
@@ -297,6 +237,66 @@ public:
 private:
 	const float procent = 0.2;
 };
+
+
+// ================= GRACZ IMPLEMENTACJA =======================================
+
+unsigned int Gracz::plac(unsigned int cena) {
+	if ( _gotowka >= cena ) {
+		_gotowka -= cena;
+		return cena;
+	} else {
+		// brak kasy - sprzedaje nieruchomosci jesli chce
+		wantSell();
+
+		if ( _gotowka >= cena ) {
+			_gotowka -= cena;
+			return cena;
+		} else {
+			// bankrutuje
+			_bankrut = true;
+			return _gotowka;
+		}
+	}
+}
+
+// wantBuy wywolywane jest w nieruchomosciach w funkcji zostan(...);
+// zwraca true gdy gracz chce kupic nieruchomosc i stac go na to
+bool Gracz::wantBuy(Nieruchomosc* n) {
+	// sprawdzamy czy gracza na to stac
+	if ( _gotowka < n->getCena() ) {
+		// nie stac wiec gracz sprzedaje wybrane nieruchomosci
+		wantSell();
+	}
+	if ( _gotowka < n->getCena() ) {
+		// jesli potencjalne sprzedane nieruchomosci nadal nie wystarczaja na
+		// pokrycie to prawdopodobnie jest idiota, bo niepotrzebnie sprzedal
+		// nieruchomosci
+		return false;
+	}
+	// tutaj mamy pewnosc ze gracz ma odpowiednia ilosc gotowki do kupna n
+	if ( strategia.wantBuy( n->getNazwa() ) ) {
+		_gotowka -= n->getCena();
+		posiadlosci.push_back( n );
+		return true;
+	}
+
+	return false;
+}
+
+void Gracz::wantSell() {
+	for ( size_t i = 0; i < posiadlosci.size(); i++ ) {
+		auto n = posiadlosci[i];
+		if ( strategia.wantSell(n->getNazwa()) ) {
+			_gotowka += n->getCena() * KARA_ZA_SPRZEDAZ;
+			n->wlasciciel = nullptr;
+			// usuwamy nieruchomosc z posiadlosci gracza O(1)
+			posiadlosci[i] = posiadlosci.back();
+			posiadlosci.pop_back();
+		}
+	}
+}
+
 
 // ======================== PLANSZA ============================================
 

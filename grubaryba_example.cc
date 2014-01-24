@@ -34,7 +34,7 @@ public:
 
 int main(int argc, const char * argv[]) {
 
-/*
+
     std::shared_ptr<MojaGrubaRyba> mgr = std::shared_ptr<MojaGrubaRyba>(new MojaGrubaRyba());
     std::shared_ptr<Die> die = std::shared_ptr<Die>(new ExampleDie());
     std::shared_ptr<Human> albin = std::shared_ptr<Human>(new VeryDumbHuman("Albina"));
@@ -43,6 +43,6 @@ int main(int argc, const char * argv[]) {
     mgr->addComputerPlayer(GrubaRyba::ComputerLevel::SMARTASS);
     mgr->addHumanPlayer(albin);
     mgr->play(100);
-*/
+
     return 0;
 }
