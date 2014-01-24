@@ -389,9 +389,12 @@ bool MojaGrubaRyba::status( std::shared_ptr<Gracz> gracz ) {
 		printf( "%s pole: %s *** czekanie: %d ***\n", gracz->getNazwa().c_str(),
 			plansza->pole( gracz->pozycja() ).getNazwa().c_str(),
 			gracz->postoj() );
-		gracz->postoj()--;
 		return false;
 	}
+
+	printf( "%s pole: %s gotowka: %d\n", gracz->getNazwa().c_str(),
+		plansza->pole( gracz->pozycja() ).getNazwa().c_str(),
+		gracz->gotowka() );
 
 	return true;
 }
@@ -429,8 +432,16 @@ void MojaGrubaRyba::play(unsigned int rounds) {
 			std::shared_ptr<Gracz> gracz = gracze[g];
 
 			// sprawdza czy gracz moze sie ruszyc w tej rundzie,
-			// wypisuje stosowny komunikat, gdy nie moze
-			if ( !status( gracz ) ) {
+			if ( gracz->bankrut() ) {
+				continue;
+			}
+
+			if ( czy_wygrana() ) {
+				continue;
+			}
+
+			if ( gracz->postoj() > 0  ) {
+				gracz->postoj()--;
 				continue;
 			}
 
@@ -461,24 +472,12 @@ void MojaGrubaRyba::play(unsigned int rounds) {
 					ile_bankructw++;
 				}
 			}
-
-			// sprawdza status po wykonaniu ruchu
-			if ( status( gracz ) ) {
-				printf( "%s pole: %s gotowka: %d\n", gracz->getNazwa().c_str(),
-						plansza->pole( gracz->pozycja() ).getNazwa().c_str(),
-						gracz->gotowka() );
-			}
 		}
-		debend;deb("poprawny:")
+
+		// po zakonczonej rundzie wypisujemy status graczy
 		for ( size_t g = 0; g < gracze.size(); g++ ) {
-			std::shared_ptr<Gracz> gracz = gracze[g];
-				printf( "%s pole: %s gotowka: %d\n", gracz->getNazwa().c_str(),
-						plansza->pole( gracz->pozycja() ).getNazwa().c_str(),
-						gracz->gotowka() );
-
+			status( gracze[g] );
 		}
-		debend;
-
 	}
 }
 /**/
