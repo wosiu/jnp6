@@ -442,7 +442,9 @@ void MojaGrubaRyba::play(unsigned int rounds) {
 
 			if ( gracz->postoj() > 0  ) {
 				gracz->postoj()--;
-				continue;
+				if( gracz->postoj() > 0 ) {
+				   	continue;
+				}
 			}
 
 			// jesli mozna wylonic zwyciezce, to takowy nie wykonuje
