@@ -9,9 +9,6 @@ const float KARA_ZA_SPRZEDAZ = 0.5;
 const unsigned int MIN_GRACZY = 2;
 const unsigned int MAX_GRACZY = 8;
 
-// forward declarations:
-class Nieruchomosc;
-
 // ========================= STRATEGIE GRACZA ==================================
 
 class Strategia {
@@ -58,10 +55,12 @@ public:
 	Czlowiecza(std::shared_ptr<Human> _czlowiek) : czlowiek(_czlowiek) {}
 
 	bool wantSell(Nieruchomosc* n , Gracz* g = NULL) {
-		return czlowiek->wantSell(n->getNazwa());
+		bool answer = czlowiek->wantSell( n->getNazwa() );
+		return answer;
 	}
 	bool wantBuy(Nieruchomosc* n , Gracz* g = NULL) {
-		return czlowiek->wantBuy(n->getNazwa());
+		bool answer = czlowiek->wantBuy( n->getNazwa() );
+		return answer;
 	}
 
 private:
@@ -84,7 +83,7 @@ private:
 	void wantSell();
 
 public:
-	Gracz(std::string& nazwa, Strategia strategia) : nazwa(nazwa),
+	Gracz(const std::string& nazwa, Strategia strategia) : nazwa(nazwa),
 			strategia(strategia) {
 		reset();
 	}
@@ -302,12 +301,8 @@ public:
 		reset();
 	}
 
-	void przejdz( Gracz* g, unsigned int poz ) {
-		pola[poz].przejdz(g);
-	}
-
-	void zatrzymaj( Gracz* g, unsigned int poz ) {
-		pola[poz].zostan(g);
+	Pole& pole(unsigned int poz) {
+		return pola[poz];
 	}
 
 	void reset() {
@@ -362,14 +357,14 @@ void MojaGrubaRyba::addHumanPlayer(std::shared_ptr<Human> human) {
 
 bool MojaGrubaRyba::status( Gracz* gracz ) {
 	if ( gracz->bankrut() ) {
-		printf("%s *** bankrut ***\n", gracz->getNazwa() );
+		printf("%s *** bankrut ***\n", gracz->getNazwa().c_str() );
 		return false;
 	}
 
 	if ( gracz->postoj() > 0 ) {
 		printf( "%s pole: %s *** czekanie: %d ***\n", gracz->getNazwa(),
-			plansza[gracz->getPozycja()].getNazwa(),
-			gracz->postuj() );
+			plansza[gracz->pozycja()].getNazwa(),
+			gracz->postoj() );
 		gracz->postoj()--;
 		return false;
 	}
@@ -394,7 +389,7 @@ void MojaGrubaRyba::init_play() {
 
 
 bool MojaGrubaRyba::czy_wygrana() {
-	return ile_bankructw == gracze.size() - 1;
+	return ( ile_bankructw == gracze.size() - 1 );
 }
 
 void MojaGrubaRyba::play(unsigned int rounds) {
@@ -402,7 +397,7 @@ void MojaGrubaRyba::play(unsigned int rounds) {
 	init_play();
 
 	// iterujemy po rundach
-	for ( auto r = 1; r <= rounds && !czy_wygrana(); r++ ) {
+	for ( unsigned int r = 1; r <= rounds && !czy_wygrana(); r++ ) {
 		printf("Runda: %d\n", r);
 		// iterujemy po kolejnych graczach w rundzie
 		for ( size_t g = 0; g < gracze.size(); g++ ) {
@@ -417,27 +412,24 @@ void MojaGrubaRyba::play(unsigned int rounds) {
 			// jesli mozna wylonic zwyciezce, to takowy nie wykonuje
 			// juz ruchu
 			if ( !czy_wygrana() ) {
-				auto rzut = die.roll() + die.roll();
-				auto poz = gracz.pozycja();
-				// zmienna boolowa mowi, czy udalo sie przejsc / stanac na polu
-				// false oznacza bankructwo w wyniku przejscia / staniecia
-				bool ruch = true;
+				auto rzut = die->roll() + die->roll();
+				auto poz = gracz->pozycja();
 
 				// iterujemy po (rzut mniej 1) polach - idziemy do celu
 				for ( int i = 1; i < rzut && !gracz->bankrut(); i++ ) {
 					(++poz) %= plansza.size();
-					plansza.przejdz( gracz, poz );
+					plansza.pole(poz).przejdz( gracz );
 				}
 
 				// Doszedl pomyslnie do celu lub zbankrutowal po drodze
 				// (np na polu Depozyt)
 				if ( !gracz->bankrut() ) {
 					(++poz) %= plansza.size();
-					gracz.pozycja() = poz;
+					gracz->pozycja() = poz;
 					// pole moze zmienic wyzej domyslnie ustawiona pozycje gracza
 					// takim polem mogloby byc w przyszlosci np "Idź do akwarium"
 					// Ponizej gracz takze moze stac sie bankrutem
-					plansza.zostan( gracz, poz );
+					plansza.pole(poz).zostan( gracz );
 				}
 
 				if ( gracz->bankrut() ) {
@@ -448,7 +440,7 @@ void MojaGrubaRyba::play(unsigned int rounds) {
 			// sprawdza status po wykonaniu ruchu
 			if ( status( gracz ) ) {
 				printf( "%s pole: %s gotowka: %d\n", gracz->getNazwa(),
-						plansza[gracz->getPozycja()].getNazwa(),
+						plansza.pole( gracz->pozycja() ).getNazwa(),
 						gracz->gotowka() );
 			}
 		}

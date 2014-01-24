@@ -5,7 +5,9 @@
 #include <vector>
 #include "grubaryba.h"
 
+// forward declarations:
 class Gracz;
+class Nieruchomosc;
 class Plansza;
 
 // MojaGrubaRyba traktujemy jako 'zarzadce' gry
@@ -42,7 +44,7 @@ private:
 	std::shared_ptr<Die> die = nullptr;
 	std::vector<Gracz> gracze;
 	Plansza plansza;
-	int ile_bankructw;
+	unsigned int ile_bankructw;
 
 	void init_play();
 	bool czy_wygrana();
