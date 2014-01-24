@@ -19,7 +19,7 @@ public:
 
     // Przekazuje prototypową kostkę do gry.
     // Jeżeli argumentem jest pusty wskaźnik, to nie wykonuje żadnej operacji (ale nie ma błędu).
-    void setDie(std::shared_ptr<Die> die);
+    void setDie(std::shared_ptr<Die> die) { this->die = die; }
 
     // Dodaje nowego gracza komputerowego, który gra na zdefiniowanym poziomie.
     // Nowy gracz komputerowy nazywa się Gracz<Numer>, gdzie <Numer> to numer pozycji,

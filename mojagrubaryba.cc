@@ -26,10 +26,12 @@ public:
 	virtual void reset() {};
 };
 
+
 class Smartass : public Strategia {
 public:
 	bool wantBuy(std::string nieruchomosc ) { return true; }
 };
+
 
 class Dumb : public Strategia {
 public:
@@ -112,6 +114,7 @@ public:
 	std::string getNazwa() const { return nazwa; }
 };
 
+
 // ============================= POLE ==========================================
 
 class Pole {
@@ -150,6 +153,7 @@ public:
 	void zostan(std::shared_ptr<Gracz> g) { g->postoj() = ile_tur; }
 };
 
+
 class Depozyt : public Pole {
 private:
 	unsigned int gotowka = 0;
@@ -168,6 +172,7 @@ public:
 	}
 };
 
+
 class Kara : public Pole {
 private:
 	unsigned int kara;
@@ -175,6 +180,7 @@ public:
 	Kara(unsigned int kara, std::string nazwa) : Pole(nazwa), kara(kara) {}
 	void zostan(std::shared_ptr<Gracz> g) { g->plac(kara); }
 };
+
 
 class Nagroda : public Pole {
 private:
@@ -186,7 +192,7 @@ public:
 	void zostan(std::shared_ptr<Gracz> g) { g->dodajGotowke(nagroda); }
 };
 
-// ---------------------- Interfejs nieruchomosci ------------------------------
+// ---------------------- nieruchomosci ----------------------------------------
 
 class Nieruchomosc : public Pole {
 public:
@@ -196,24 +202,7 @@ public:
 	std::shared_ptr<Gracz> wlasciciel = nullptr;
 
 	virtual void przejdz(std::shared_ptr<Gracz> g) {}
-
-	virtual void zostan(std::shared_ptr<Gracz> g) {
-		// czy na polu stanal wlasciciel pola
-		if ( wlasciciel == g ) {
-			return;
-		}
-		// czy nieruchomosc na sprzedaz
-		if ( wlasciciel == nullptr ) {
-			// oferujemy graczowi zakupienie nieruchomosci
-			if ( g->wantBuy( this ) ) {
-				// chce i moze kupic
-				wlasciciel = g;
-			}
-		} else {
-			wlasciciel->dodajGotowke( g->plac(stawka) );
-		}
-	}
-
+	virtual void zostan(std::shared_ptr<Gracz> g);
 	unsigned int getCena() const { return cena; }
 // TODO private i geter to stawki
 protected:
@@ -230,6 +219,7 @@ private:
 	const float procent = 0.4;
 };
 
+
 class Koralowiec : public Nieruchomosc {
 public:
 	Koralowiec(unsigned int cena, std::string nazwa ) :
@@ -237,65 +227,6 @@ public:
 private:
 	const float procent = 0.2;
 };
-
-
-// ================= GRACZ IMPLEMENTACJA =======================================
-
-unsigned int Gracz::plac(unsigned int cena) {
-	if ( _gotowka >= cena ) {
-		_gotowka -= cena;
-		return cena;
-	} else {
-		// brak kasy - sprzedaje nieruchomosci jesli chce
-		wantSell();
-
-		if ( _gotowka >= cena ) {
-			_gotowka -= cena;
-			return cena;
-		} else {
-			// bankrutuje
-			_bankrut = true;
-			return _gotowka;
-		}
-	}
-}
-
-// wantBuy wywolywane jest w nieruchomosciach w funkcji zostan(...);
-// zwraca true gdy gracz chce kupic nieruchomosc i stac go na to
-bool Gracz::wantBuy(Nieruchomosc* n) {
-	// sprawdzamy czy gracza na to stac
-	if ( _gotowka < n->getCena() ) {
-		// nie stac wiec gracz sprzedaje wybrane nieruchomosci
-		wantSell();
-	}
-	if ( _gotowka < n->getCena() ) {
-		// jesli potencjalne sprzedane nieruchomosci nadal nie wystarczaja na
-		// pokrycie to prawdopodobnie jest idiota, bo niepotrzebnie sprzedal
-		// nieruchomosci
-		return false;
-	}
-	// tutaj mamy pewnosc ze gracz ma odpowiednia ilosc gotowki do kupna n
-	if ( strategia.wantBuy( n->getNazwa() ) ) {
-		_gotowka -= n->getCena();
-		posiadlosci.push_back( n );
-		return true;
-	}
-
-	return false;
-}
-
-void Gracz::wantSell() {
-	for ( size_t i = 0; i < posiadlosci.size(); i++ ) {
-		auto n = posiadlosci[i];
-		if ( strategia.wantSell(n->getNazwa()) ) {
-			_gotowka += n->getCena() * KARA_ZA_SPRZEDAZ;
-			n->wlasciciel = nullptr;
-			// usuwamy nieruchomosc z posiadlosci gracza O(1)
-			posiadlosci[i] = posiadlosci.back();
-			posiadlosci.pop_back();
-		}
-	}
-}
 
 
 // ======================== PLANSZA ============================================
@@ -328,10 +259,84 @@ public:
 };
 
 
-// ============================ MojaGrubaRyba ==================================
-void MojaGrubaRyba::setDie(std::shared_ptr<Die> die) {
-	this->die = die;
+// ============================ IMPLEMENTACJE ==================================
+
+void Nieruchomosc::zostan(std::shared_ptr<Gracz> g) {
+	// czy na polu stanal wlasciciel pola
+	if ( wlasciciel == g ) {
+		return;
+	}
+	// czy nieruchomosc na sprzedaz
+	if ( wlasciciel == nullptr ) {
+		// oferujemy graczowi zakupienie nieruchomosci
+		if ( g->wantBuy( this ) ) {
+		// chce i moze kupic
+			wlasciciel = g;
+		}
+	} else {
+		wlasciciel->dodajGotowke( g->plac(stawka) );
+	}
 }
+
+
+unsigned int Gracz::plac(unsigned int cena) {
+	if ( _gotowka >= cena ) {
+		_gotowka -= cena;
+		return cena;
+	} else {
+		// brak kasy - sprzedaje nieruchomosci jesli chce
+		wantSell();
+
+		if ( _gotowka >= cena ) {
+			_gotowka -= cena;
+			return cena;
+		} else {
+			// bankrutuje
+			_bankrut = true;
+			return _gotowka;
+		}
+	}
+}
+
+
+// wantBuy wywolywane jest w nieruchomosciach w funkcji zostan(...);
+// zwraca true gdy gracz chce kupic nieruchomosc i stac go na to
+bool Gracz::wantBuy(Nieruchomosc* n) {
+	// sprawdzamy czy gracza na to stac
+	if ( _gotowka < n->getCena() ) {
+		// nie stac wiec gracz sprzedaje wybrane nieruchomosci
+		wantSell();
+	}
+	if ( _gotowka < n->getCena() ) {
+		// jesli potencjalne sprzedane nieruchomosci nadal nie wystarczaja na
+		// pokrycie to prawdopodobnie jest idiota, bo niepotrzebnie sprzedal
+		// nieruchomosci
+		return false;
+	}
+	// tutaj mamy pewnosc ze gracz ma odpowiednia ilosc gotowki do kupna n
+	if ( strategia.wantBuy( n->getNazwa() ) ) {
+		_gotowka -= n->getCena();
+		posiadlosci.push_back( n );
+		return true;
+	}
+
+	return false;
+}
+
+
+void Gracz::wantSell() {
+	for ( size_t i = 0; i < posiadlosci.size(); i++ ) {
+		auto n = posiadlosci[i];
+		if ( strategia.wantSell(n->getNazwa()) ) {
+			_gotowka += n->getCena() * KARA_ZA_SPRZEDAZ;
+			n->wlasciciel = nullptr;
+			// usuwamy nieruchomosc z posiadlosci gracza O(1)
+			posiadlosci[i] = posiadlosci.back();
+			posiadlosci.pop_back();
+		}
+	}
+}
+
 
 void MojaGrubaRyba::addComputerPlayer(ComputerLevel level) {
 
@@ -353,6 +358,7 @@ void MojaGrubaRyba::addComputerPlayer(ComputerLevel level) {
 	}
 }
 
+
 void MojaGrubaRyba::addHumanPlayer(std::shared_ptr<Human> human) {
 	if ( gracze.size() == MAX_GRACZY ) {
 		throw TooManyPlayersException( MAX_GRACZY );
@@ -360,6 +366,7 @@ void MojaGrubaRyba::addHumanPlayer(std::shared_ptr<Human> human) {
 	gracze.push_back(
 				std::make_shared<Gracz>(human->getName(), Czlowiecza(human)) );
 }
+
 
 bool MojaGrubaRyba::status( std::shared_ptr<Gracz> gracz ) {
 	if ( gracz->bankrut() ) {
@@ -377,6 +384,7 @@ bool MojaGrubaRyba::status( std::shared_ptr<Gracz> gracz ) {
 
 	return true;
 }
+
 
 void MojaGrubaRyba::init_play() {
 	if ( die = nullptr ) {
@@ -397,6 +405,7 @@ void MojaGrubaRyba::init_play() {
 bool MojaGrubaRyba::czy_wygrana() {
 	return ( ile_bankructw == gracze.size() - 1 );
 }
+
 
 void MojaGrubaRyba::play(unsigned int rounds) {
 
