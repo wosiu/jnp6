@@ -337,6 +337,10 @@ void Gracz::wantSell() {
 	}
 }
 
+MojaGrubaRyba::MojaGrubaRyba() {
+	plansza = std::make_shared<Plansza>();
+}
+
 
 void MojaGrubaRyba::addComputerPlayer(ComputerLevel level) {
 
