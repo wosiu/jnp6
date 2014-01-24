@@ -53,7 +53,7 @@ public:
 	}
 
 	bool wantBuy(std::string nieruchomosc  ) {
-		return ( ( ++licznik ) %= MODULO ) == 1;
+		return ( ( ++licznik ) %= MODULO ) == 0;
 	}
 
 private:
@@ -224,18 +224,14 @@ protected:
 class ObiektUzytPublicznej : public Nieruchomosc {
 public:
 	ObiektUzytPublicznej(unsigned int cena, std::string nazwa ) :
-			Nieruchomosc( cena, cena * procent, nazwa ) {}
-private:
-	const float procent = 0.4;
+			Nieruchomosc( cena, cena * 0.4, nazwa ) {}
 };
 
 
 class Koralowiec : public Nieruchomosc {
 public:
 	Koralowiec(unsigned int cena, std::string nazwa ) :
-			Nieruchomosc( cena, cena * procent, nazwa ) {}
-private:
-	const float procent = 0.2;
+			Nieruchomosc( cena, cena * 0.2, nazwa ) {}
 };
 
 
@@ -473,6 +469,16 @@ void MojaGrubaRyba::play(unsigned int rounds) {
 						gracz->gotowka() );
 			}
 		}
+		debend;deb("poprawny:")
+		for ( size_t g = 0; g < gracze.size(); g++ ) {
+			std::shared_ptr<Gracz> gracz = gracze[g];
+				printf( "%s pole: %s gotowka: %d\n", gracz->getNazwa().c_str(),
+						plansza->pole( gracz->pozycja() ).getNazwa().c_str(),
+						gracz->gotowka() );
+
+		}
+		debend;
+
 	}
 }
 /**/
