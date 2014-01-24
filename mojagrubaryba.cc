@@ -6,7 +6,7 @@
 
 #include <iostream>
 using namespace std;
-#define debon 0
+#define debon 1
 #define deb(burak) if(debon) {cout<<"DEB-> "<<#burak<<": "<<burak<<endl;}
 #define debv(burak) if(debon) {cout<<"DEB-> "<<#burak<<": \t"; for(unsigned int zyx=0;zyx<burak.size();zyx++) cout<<burak[zyx]<<" "; cout<<endl;}
 #define debt(burak,SIzE) if(debon) {cout<<"DEB-> "<<#burak<<": \t"; for(unsigned int zyx=0;zyx<SIzE;zyx++) cout<<burak[zyx]<<" "; cout<<endl;}
@@ -105,6 +105,7 @@ public:
 	}
 
 	void resetuj() {
+		_pozycja = 0;
 		_gotowka = POCZATKOWA_KASA;
 		_ile_postoju = 0;
 		_bankrut = false;
@@ -131,9 +132,9 @@ public:
 	Pole( std::string nazwa ) : nazwa(nazwa) {}
 
 	// gdy gracz przechodzi przez pole
-	virtual void przejdz(std::shared_ptr<Gracz> g) {deb("WSZEDL DO NADKLASY 1");}
+	virtual void przejdz(std::shared_ptr<Gracz> g) {}
 	// gdy gracz zatrzymuje sie na polu
-	virtual void zostan(std::shared_ptr<Gracz> g) {deb("WSZEDL DO NADKLASY 2");}
+	virtual void zostan(std::shared_ptr<Gracz> g) {}
 
 	std::string getNazwa() { return nazwa; }
 
@@ -147,8 +148,8 @@ private:
 	static const unsigned int nagroda = 50;
 public:
 	Start( std::string nazwa  ) : Pole( nazwa ) {}
-	virtual void zostan(std::shared_ptr<Gracz> g) { deb("WSZEDL!"); g->dodajGotowke(nagroda); }
-	void przejdz(std::shared_ptr<Gracz> g) { deb("WSZEDL2!"); this->zostan(g); }
+	virtual void zostan(std::shared_ptr<Gracz> g) { g->dodajGotowke(nagroda); }
+	void przejdz(std::shared_ptr<Gracz> g) { this->zostan(g); }
 };
 
 
@@ -261,6 +262,7 @@ public:
 		pola.push_back(Start("Start"));
 		pola.push_back(Pole("Wyspa"));*/
 
+		pola.push_back(make_shared<Start>("Start"));
 		pola.push_back(make_shared<Koralowiec>(160, "Anemonia"));
 		pola.push_back(make_shared<Pole>("Wyspa"));
 		pola.push_back(make_shared<Koralowiec>(200, "Aporina"));
@@ -365,7 +367,7 @@ void MojaGrubaRyba::addComputerPlayer(ComputerLevel level) {
 		throw TooManyPlayersException( MAX_GRACZY );
 	}
 
-	std::string nazwa = "Gracz" + std::to_string( gracze.size() );
+	std::string nazwa = "Gracz" + std::to_string( gracze.size() + 1 );
 
 	switch ( level ) {
 		case ComputerLevel::DUMB:
@@ -448,12 +450,10 @@ void MojaGrubaRyba::play(unsigned int rounds) {
 			// juz ruchu
 			if ( !czy_wygrana() ) {
 				auto rzut = die->roll() + die->roll();
-				deb( rzut );
 				auto poz = gracz->pozycja();
 
 				// iterujemy po (rzut mniej 1) polach - idziemy do celu
 				for ( int i = 1; i < rzut && !gracz->bankrut(); i++ ) {
-					deb(poz);
 					(++poz) %= plansza->size();
 					plansza->pole(poz).przejdz( gracz );
 				}
@@ -462,14 +462,11 @@ void MojaGrubaRyba::play(unsigned int rounds) {
 				// (np na polu Depozyt)
 				if ( !gracz->bankrut() ) {
 					(++poz) %= plansza->size();
-					deb(poz);
 					gracz->pozycja() = poz;
 					// pole moze zmienic wyzej domyslnie ustawiona pozycje gracza
 					// takim polem mogloby byc w przyszlosci np "Idź do akwarium"
 					// Ponizej gracz takze moze stac sie bankrutem
-					deb(gracz->gotowka());
 					plansza->pole(poz).zostan( gracz );
-					deb(gracz->gotowka());
 				}
 
 				if ( gracz->bankrut() ) {
