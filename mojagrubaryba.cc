@@ -203,8 +203,9 @@ public:
 	virtual void przejdz(std::shared_ptr<Gracz> g) {}
 	virtual void zostan(std::shared_ptr<Gracz> g);
 	unsigned int getCena() const { return cena; }
-// TODO private i geter to stawki
-protected:
+	unsigned int getStawka() const { return stawka; }
+
+private:
 	unsigned int cena;
 	unsigned int stawka;
 };
