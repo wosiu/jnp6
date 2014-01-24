@@ -88,7 +88,7 @@ class Nieruchomosc;
 class Gracz {
 private:
 	std::string nazwa;
-	Strategia strategia;
+	shared_ptr<Strategia> strategia;
 	std::vector<Nieruchomosc*> posiadlosci;
 	unsigned int _gotowka;
 	unsigned int _ile_postoju;
@@ -99,7 +99,7 @@ private:
 	void wantSell();
 
 public:
-	Gracz(const std::string& nazwa, Strategia strategia) : nazwa(nazwa),
+	Gracz(const std::string& nazwa, shared_ptr<Strategia> strategia) : nazwa(nazwa),
 			strategia(strategia) {
 		resetuj();
 	}
@@ -109,7 +109,7 @@ public:
 		_gotowka = POCZATKOWA_KASA;
 		_ile_postoju = 0;
 		_bankrut = false;
-		strategia.resetuj();
+		strategia->resetuj();
 	}
 	// zwraca hajs jaki udalo sie zaplacic. Gdy brak hajsu -> sprawdza czy gracz
 	// chce sprzedac posiadlosci. Gdy po sprzedaniu nadal brak kasy ->
@@ -253,19 +253,11 @@ public:
 
 	void resetuj() {
 		pola.clear();
-		/*pola.push_back(Start("Start"));
-		pola.push_back(Start("Start"));
-		pola.push_back(Start("Start"));
-		pola.push_back(Pole("Wyspa"));
-		pola.push_back(Start("Start"));
-		pola.push_back(Start("Start"));
-		pola.push_back(Start("Start"));
-		pola.push_back(Pole("Wyspa"));*/
 
 		pola.push_back(make_shared<Start>("Start"));
 		pola.push_back(make_shared<Koralowiec>(160, "Anemonia"));
 		pola.push_back(make_shared<Pole>("Wyspa"));
-		pola.push_back(make_shared<Koralowiec>(200, "Aporina"));
+		pola.push_back(make_shared<Koralowiec>(220, "Aporina"));
 		pola.push_back(make_shared<Akwarium>(3, "Akwarium"));
 		pola.push_back(make_shared<ObiektUzytPublicznej>(300, "Grota"));
 		pola.push_back(make_shared<Koralowiec>(280, "Menella"));
@@ -333,7 +325,7 @@ bool Gracz::wantBuy(Nieruchomosc* n) {
 		return false;
 	}
 	// tutaj mamy pewnosc ze gracz ma odpowiednia ilosc gotowki do kupna n
-	if ( strategia.wantBuy( n->getNazwa() ) ) {
+	if ( strategia->wantBuy( n->getNazwa() ) ) {
 		_gotowka -= n->getCena();
 		posiadlosci.push_back( n );
 		return true;
@@ -346,7 +338,7 @@ bool Gracz::wantBuy(Nieruchomosc* n) {
 void Gracz::wantSell() {
 	for ( size_t i = 0; i < posiadlosci.size(); i++ ) {
 		auto n = posiadlosci[i];
-		if ( strategia.wantSell(n->getNazwa()) ) {
+		if ( strategia->wantSell(n->getNazwa()) ) {
 			_gotowka += n->getCena() * KARA_ZA_SPRZEDAZ;
 			n->wlasciciel = nullptr;
 			// usuwamy nieruchomosc z posiadlosci gracza O(1)
@@ -373,10 +365,10 @@ void MojaGrubaRyba::addComputerPlayer(ComputerLevel level) {
 		case ComputerLevel::DUMB:
 			//TO DO sprawdzic czy pobiernaie referencji z tak stworzonego
 			// obiekty strategii sie nie wysypuje
-			gracze.push_back( std::make_shared<Gracz>(nazwa, Dumb()) );
+			gracze.push_back( std::make_shared<Gracz>(nazwa, make_shared<Dumb>()) );
 			break;
 		case ComputerLevel::SMARTASS:
-			gracze.push_back( std::make_shared<Gracz>(nazwa, Smartass()) );
+			gracze.push_back( std::make_shared<Gracz>(nazwa, make_shared<Smartass>()) );
 			break;
 	}
 }
@@ -387,7 +379,7 @@ void MojaGrubaRyba::addHumanPlayer(std::shared_ptr<Human> human) {
 		throw TooManyPlayersException( MAX_GRACZY );
 	}
 	gracze.push_back(
-				std::make_shared<Gracz>(human->getName(), Czlowiecza(human)) );
+				std::make_shared<Gracz>(human->getName(), make_shared<Czlowiecza>(human)) );
 }
 
 
