@@ -1,5 +1,6 @@
 #include "mojagrubaryba.h"
 #include <string>
+#include <map>
 
 // TODO:
 // add no except gdzie trza (i moze consty?)
@@ -78,7 +79,8 @@ class Gracz {
 private:
 	std::string nazwa;
 	shared_ptr<Strategia> strategia;
-	std::vector<Nieruchomosc*> posiadlosci;
+	int licznik_nier = 0;
+	std::map<int, Nieruchomosc*> posiadlosci;
 	unsigned int _gotowka;
 	unsigned int _ile_postoju;
 	unsigned int _pozycja; // pozycja na planszy
@@ -311,7 +313,7 @@ bool Gracz::wantBuy(Nieruchomosc* n) {
 	// tutaj mamy pewnosc ze gracz ma odpowiednia ilosc gotowki do kupna n
 	if (strategia->wantBuy(n->getNazwa())) {
 		_gotowka -= n->getCena();
-		posiadlosci.push_back(n);
+		posiadlosci[licznik_nier++] = n;
 		return true;
 	}
 
@@ -320,14 +322,14 @@ bool Gracz::wantBuy(Nieruchomosc* n) {
 
 
 void Gracz::wantSell() {
-	for (size_t i = 0; i < posiadlosci.size(); i++) {
-		auto n = posiadlosci[i];
+
+	for (auto it = posiadlosci.begin(); it != posiadlosci.end(); it++) {
+		auto n = it->second;
 		if (strategia->wantSell(n->getNazwa())) {
 			_gotowka += n->getCena() * KARA_ZA_SPRZEDAZ;
 			n->wlasciciel = nullptr;
 			// usuwamy nieruchomosc z posiadlosci gracza O(1)
-			posiadlosci[i] = posiadlosci.back();
-			posiadlosci.pop_back();
+			posiadlosci.erase( it );
 		}
 	}
 }

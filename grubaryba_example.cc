@@ -43,7 +43,7 @@ int main(int argc, const char * argv[]) {
     mgr->addComputerPlayer(GrubaRyba::ComputerLevel::SMARTASS);
     mgr->addHumanPlayer(albin);
 
-	int n = 5;
+	int n = 1;
 
 	while(n--)
     	mgr->play(100);
