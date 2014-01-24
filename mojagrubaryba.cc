@@ -6,6 +6,12 @@
 
 #include <iostream>
 using namespace std;
+#define debon 0
+#define deb(burak) if(debon) {cout<<"DEB-> "<<#burak<<": "<<burak<<endl;}
+#define debv(burak) if(debon) {cout<<"DEB-> "<<#burak<<": \t"; for(unsigned int zyx=0;zyx<burak.size();zyx++) cout<<burak[zyx]<<" "; cout<<endl;}
+#define debt(burak,SIzE) if(debon) {cout<<"DEB-> "<<#burak<<": \t"; for(unsigned int zyx=0;zyx<SIzE;zyx++) cout<<burak[zyx]<<" "; cout<<endl;}
+#define debend if(debon) {cout<<"_____________________"<<endl;}
+
 
 const unsigned int POCZATKOWA_KASA = 1000;
 const float KARA_ZA_SPRZEDAZ = 0.5;
@@ -125,9 +131,9 @@ public:
 	Pole( std::string nazwa ) : nazwa(nazwa) {}
 
 	// gdy gracz przechodzi przez pole
-	virtual void przejdz(std::shared_ptr<Gracz> g) {}
+	virtual void przejdz(std::shared_ptr<Gracz> g) {deb("WSZEDL DO NADKLASY 1");}
 	// gdy gracz zatrzymuje sie na polu
-	virtual void zostan(std::shared_ptr<Gracz> g) {}
+	virtual void zostan(std::shared_ptr<Gracz> g) {deb("WSZEDL DO NADKLASY 2");}
 
 	std::string getNazwa() { return nazwa; }
 
@@ -141,8 +147,8 @@ private:
 	static const unsigned int nagroda = 50;
 public:
 	Start( std::string nazwa  ) : Pole( nazwa ) {}
-	void zostan(std::shared_ptr<Gracz> g) { g->dodajGotowke(nagroda); }
-	void przejdz(std::shared_ptr<Gracz> g) { this->zostan(g); }
+	virtual void zostan(std::shared_ptr<Gracz> g) { deb("WSZEDL!"); g->dodajGotowke(nagroda); }
+	void przejdz(std::shared_ptr<Gracz> g) { deb("WSZEDL2!"); this->zostan(g); }
 };
 
 
@@ -236,28 +242,36 @@ private:
 
 class Plansza {
 private:
-	std::vector<Pole> pola;
+	std::vector<shared_ptr<Pole> > pola;
 
 public:
 	Plansza() { resetuj(); }
 
 	unsigned int size() { return pola.size(); }
-	Pole& pole(unsigned int poz) { return pola[poz]; }
+	Pole& pole(unsigned int poz) { return *pola[poz]; }
 
 	void resetuj() {
 		pola.clear();
+		/*pola.push_back(Start("Start"));
 		pola.push_back(Start("Start"));
-		pola.push_back(Koralowiec(160, "Anemonia"));
+		pola.push_back(Start("Start"));
 		pola.push_back(Pole("Wyspa"));
-		pola.push_back(Koralowiec(200, "Aporina"));
-		pola.push_back(Akwarium(3, "Akwarium"));
-		pola.push_back(ObiektUzytPublicznej(300, "Grota"));
-		pola.push_back(Koralowiec(280, "Menella"));
-		pola.push_back(Depozyt(15, "Laguna"));
-		pola.push_back(ObiektUzytPublicznej(250, "Statek"));
-		pola.push_back(Nagroda(120, "Blazenki"));
-		pola.push_back(Koralowiec(400, "Pennatula"));
-		pola.push_back(Kara(180, "Rekin"));
+		pola.push_back(Start("Start"));
+		pola.push_back(Start("Start"));
+		pola.push_back(Start("Start"));
+		pola.push_back(Pole("Wyspa"));*/
+
+		pola.push_back(make_shared<Koralowiec>(160, "Anemonia"));
+		pola.push_back(make_shared<Pole>("Wyspa"));
+		pola.push_back(make_shared<Koralowiec>(200, "Aporina"));
+		pola.push_back(make_shared<Akwarium>(3, "Akwarium"));
+		pola.push_back(make_shared<ObiektUzytPublicznej>(300, "Grota"));
+		pola.push_back(make_shared<Koralowiec>(280, "Menella"));
+		pola.push_back(make_shared<Depozyt>(15, "Laguna"));
+		pola.push_back(make_shared<ObiektUzytPublicznej>(250, "Statek"));
+		pola.push_back(make_shared<Nagroda>(120, "Blazenki"));
+		pola.push_back(make_shared<Koralowiec>(400, "Pennatula"));
+		pola.push_back(make_shared<Kara>(180, "Rekin"));
 	}
 };
 
@@ -415,7 +429,6 @@ bool MojaGrubaRyba::czy_wygrana() {
 
 
 void MojaGrubaRyba::play(unsigned int rounds) {
-
 	init_play();
 
 	// iterujemy po rundach
@@ -435,10 +448,12 @@ void MojaGrubaRyba::play(unsigned int rounds) {
 			// juz ruchu
 			if ( !czy_wygrana() ) {
 				auto rzut = die->roll() + die->roll();
+				deb( rzut );
 				auto poz = gracz->pozycja();
 
 				// iterujemy po (rzut mniej 1) polach - idziemy do celu
 				for ( int i = 1; i < rzut && !gracz->bankrut(); i++ ) {
+					deb(poz);
 					(++poz) %= plansza->size();
 					plansza->pole(poz).przejdz( gracz );
 				}
@@ -447,11 +462,14 @@ void MojaGrubaRyba::play(unsigned int rounds) {
 				// (np na polu Depozyt)
 				if ( !gracz->bankrut() ) {
 					(++poz) %= plansza->size();
+					deb(poz);
 					gracz->pozycja() = poz;
 					// pole moze zmienic wyzej domyslnie ustawiona pozycje gracza
 					// takim polem mogloby byc w przyszlosci np "Idź do akwarium"
 					// Ponizej gracz takze moze stac sie bankrutem
+					deb(gracz->gotowka());
 					plansza->pole(poz).zostan( gracz );
+					deb(gracz->gotowka());
 				}
 
 				if ( gracz->bankrut() ) {
